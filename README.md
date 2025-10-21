@@ -34,7 +34,7 @@ No browser, no accounts — just a self-hosted assistant that lives on your mach
 ### Installation
 
 ```bash
-git clone <https://github.com/sproutcake23/System-SL.git>
+git clone https://github.com/sproutcake23/System-SL.git
 cd SL
 python -m venv venv
 source venv/bin/activate
