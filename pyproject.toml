@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "system-sl"
+version = "0.1.0"
+description = "A FastAPI application for a Solo Leveling-inspired task management system."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "requests"
+]
+
+[tool.setuptools.packages]
+find = {where = ["src"]}
