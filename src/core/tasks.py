@@ -56,16 +56,52 @@ def add_tasks(task_type: str, task_title: str):
 
     tasks = load_tasks()
     task_type = task_type.lower().strip()
-    task_title = task_title.lower().strip()
+    task_title = task_title.strip()
 
     if task_type not in tasks:
         tasks[task_type] = []
-        tasks[task_type].append(task_title)
+
+    task_list = tasks[task_type]
+    if task_title in task_list:
+        raise ValueError(f"Task {task_title} already exists in the {task_type} section")
+
+    tasks[task_type].append(task_title)
 
     save_tasks(tasks)
 
     return task_title
 
-def remove_tasks():
-    pass  #pending
+def remove_tasks(task_type: str, task_title: str):
+    if not isinstance(task_type, str) or not task_type.strip():
+        raise ValueError("Task type must be a non-empty string")
 
+    if not isinstance(task_title, str) or not task_title.strip():
+        raise ValueError("Task title must be a non-empty string")
+
+    tasks = load_tasks()
+    task_type = task_type.lower().strip()
+    task_title = task_title.strip()
+
+    if task_type not in tasks:
+        raise ValueError(f"Task category {task_type} does not exist")
+
+    task_list = tasks[task_type]
+
+    try:
+        task_list.remove(task_title)
+        save_tasks(tasks)
+
+        return task_title
+
+    except ValueError:
+        raise ValueError(f"{task_title} does not exist in the {task_type} category")
+
+def get_random_task():
+    tasks = load_tasks()
+    non_empty_cat = {k:v for k,v in tasks.items() if v}
+    if not non_empty_cat:
+        return None
+    cat_key,cat_value = random.choice(list(non_empty_cat.items()))
+    rand_task = random.choice(cat_value)
+
+    return cat_key,rand_task
