@@ -2,7 +2,7 @@ import sys
 from src.core.tasks import load_tasks,add_tasks,remove_tasks,get_random_task
 
 def print_menu():
-    print(f"\n{"-"*5}Manage your tasks{"-"*5}")
+    print(f"\n{'-'*5}Manage your tasks{'-'*5}")
     print("(a)Add a New Task")
     print("(s)View Tasks")
     print("(r)Remove a Task")
@@ -29,7 +29,7 @@ def remove_task_mode():
         print(f"ERROR: {e}")
         sys.exit(1)
 
-def view_taks(tasks):
+def view_tasks(tasks):
     choice = input("(A)View All,(C)Category or (R)Random ?\n").strip().lower()
     if not tasks:
         print("No tasks found, add some tasks first")
@@ -65,7 +65,7 @@ def main():
         if choice=='a':
             add_task_mode()
         elif choice=='s':
-            view_taks(tasks)
+            view_tasks(tasks)
         elif choice=='r':
             remove_task_mode()
         elif choice=='q':

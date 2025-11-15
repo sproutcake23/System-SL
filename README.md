@@ -1,25 +1,30 @@
 # ⚔️ SL — The SYSTEM
 
 > _“Arise, Player.”_  
-A CLI-based personal progression system inspired by **Solo Leveling**.  
-The SYSTEM assigns tasks, reminds you through the day, and tracks your growth — right from your terminal.
+> A CLI-based personal progression system inspired by **Solo Leveling**.
+> **You define your daily quests**, and the SYSTEM keeps you on track — right from your terminal.
 
 ---
 
 ## 🧭 Overview
 
-**SL** is a lightweight Linux command-line program that helps you build consistent habits and level up in real life.
-No browser, no accounts — just a self-hosted assistant that lives on your machine, keeps track of your goals, and motivates you to complete them.
+**SL** is a lightweight command-line program that helps you build consistent habits and level up in real life.
+No browser, no accounts — just a self-hosted **manager** that lives on your machine, keeps track of your goals, and **reminds** you to complete them.
+
+## 📸 Preview
+
+![The System in Action](assets/demo.gif)
+
+_A notification appearing on the desktop after a task is due._
 
 ---
 
 ## 🚀 Features
 
-- 📝 Add, list, and complete tasks from the terminal  
-- 🔔 Desktop notifications (Debian / Fedora / Arch compatible)  
-- ⏰ Background reminder loop for incomplete tasks  
-- 🧠 XP and Level system for motivation  
-- 💾 Local JSON storage — no cloud, no tracking  
+- 📝 Add, list, and complete tasks from the terminal
+- 🔔 Desktop notifications (Linux & Windows)
+- ⏰ Background reminder loop for incomplete tasks
+- 💾 Local JSON storage — no cloud, no tracking
 
 ---
 
@@ -27,43 +32,42 @@ No browser, no accounts — just a self-hosted assistant that lives on your mach
 
 ### Requirements
 
-- Linux (Debian, Fedora, Arch, or similar)  
-- Python ≥ 3.10  
-- `notify-send` (usually included by default)
+- Linux or Windows
+- Python ≥ 3.10
 
 ### Installation
 
 ```bash
-git clone https://github.com/sproutcake23/System-SL.git
-cd SL
+git clone [https://github.com/sproutcake23/System-SL.git](https://github.com/sproutcake23/System-SL.git)
+cd System-SL
 python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+pip install .
 ```
 
-### 📂 Project Structure
-Note to collaborators: This is our proposed file structure. Please remember to update this section regularly as we add new files or directories so it always stays current.
+---
 
-This project follows a standard Python package layout. The structure is organized as follows:
+## 🎮 Usage
+
+### 1\. Open the System (CLI)
+
+To add, view, or complete your tasks, run the interactive menu:
 
 ```bash
-System-SL
-├── .gitignore
-├── LICENSE
-├── pyproject.toml  # Modern python packaging standard to store how pip will install
-├── README.md
-├── requirements.txt
-│
-├── data/        
-│
-├── src/          # for storing importable source code
-│   │
-│   ├── core/     # Core game/system logic
-│   │
-│   ├── utils/    # helper modules like module for handling the desktop notifications and utilities
-│   │
-│   └── cli/       # User-facing terminal interface
-│      
-│
-└── tests/    
-    
+python -m src.cli.main
+```
+
+### 2\. Enable Reminders
+
+To receive desktop notifications, open a **separate terminal** and run the background listener:
+
+```bash
+python -m src.utils.notifications
+```
+
+---
+
+## 🤝 Contributing
+
+Want to help improve the System?  
+Check out our [Contributing Guide](https://www.google.com/search?q=CONTRIBUTING.md) to learn how to set up the development environment and project structure.
