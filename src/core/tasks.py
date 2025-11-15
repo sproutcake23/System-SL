@@ -89,6 +89,8 @@ def remove_tasks(task_type: str, task_title: str):
 
     try:
         task_list.remove(task_title)
+        if not task_list:
+            tasks.pop(task_type)
         save_tasks(tasks)
 
         return task_title
@@ -96,12 +98,14 @@ def remove_tasks(task_type: str, task_title: str):
     except ValueError:
         raise ValueError(f"{task_title} does not exist in the {task_type} category")
 
+
 def get_random_task():
     tasks = load_tasks()
-    non_empty_cat = {k:v for k,v in tasks.items() if v}
+    non_empty_cat = {k: v for k, v in tasks.items() if v}
     if not non_empty_cat:
         return None
-    cat_key,cat_value = random.choice(list(non_empty_cat.items()))
+    cat_key, cat_value = random.choice(list(non_empty_cat.items()))
     rand_task = random.choice(cat_value)
 
-    return cat_key,rand_task
+    return cat_key, rand_task
+
