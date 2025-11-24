@@ -12,6 +12,12 @@ def get_tasks_file_path():
 
 TASKS_FILE_PATH = get_tasks_file_path()
 
+def get_completed_tasks_file_path():
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(curr_dir))
+    return os.path.join(project_root, "data", "completed_tasks.json")
+
+COMPLETED_TASKS_FILE_PATH = get_completed_tasks_file_path()
 
 def load_tasks():
     if not os.path.exists(TASKS_FILE_PATH):
@@ -109,3 +115,40 @@ def get_random_task():
 
     return cat_key, rand_task
 
+# Method for completed task
+
+def save_completed_tasks(tasks: dict):
+    try:
+        os.makedirs(os.path.dirname(COMPLETED_TASKS_FILE_PATH), exist_ok=True)
+        with open(COMPLETED_TASKS_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(tasks, f, indent=4)
+    except Exception as e:
+        print(f"Could not save completed tasks: {e}")
+
+def load_completed_tasks():
+
+    if not os.path.exists(COMPLETED_TASKS_FILE_PATH):
+        return {}
+    try:
+        with open(COMPLETED_TASKS_FILE_PATH, "r", encoding="utf-8") as f:
+            data = f.read().strip()
+            return json.loads(data) if data else {}
+    except Exception as e:
+        print(f"Error loading completed tasks: {e}")
+        return {}
+
+def mark_task_completed(task_type: str, task_title: str):
+  
+    removed_title = remove_tasks(task_type, task_title)
+
+    completed_tasks = load_completed_tasks()
+
+    if task_type not in completed_tasks:
+        completed_tasks[task_type] = []
+
+    if task_title not in completed_tasks[task_type]:
+        completed_tasks[task_type].append(task_title)
+
+    save_completed_tasks(completed_tasks)
+
+    return removed_title 

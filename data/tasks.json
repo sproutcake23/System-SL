@@ -1,17 +1,15 @@
 {
-  "work": [
-    "GitHub Commit",
-    "Code Review",
-    "Plan tomorrow's tasks"
-  ],
-  "workout": [
-    "Do 50 Push-Ups",
-    "Run 1 kilometer"
-  ],
-  "household": [
-    "Clean desk"
-  ],
-  "learning": [
-    "Read 20 Pages"
-  ]
+    "work": [
+        "Plan tomorrow's tasks"
+    ],
+    "workout": [
+        "Do 50 Push-Ups",
+        "Run 1 kilometer"
+    ],
+    "household": [
+        "Clean desk"
+    ],
+    "learning": [
+        "Read 20 Pages"
+    ]
 }
