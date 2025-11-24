@@ -38,7 +38,7 @@ _A notification appearing on the desktop after a task is due._
 ### Installation
 
 ```bash
-git clone [https://github.com/sproutcake23/System-SL.git](https://github.com/sproutcake23/System-SL.git)
+git clone https://github.com/sproutcake23/System-SL.git
 cd System-SL
 python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
@@ -70,4 +70,4 @@ python -m src.utils.notifications
 ## 🤝 Contributing
 
 Want to help improve the System?  
-Check out our [Contributing Guide](https://www.google.com/search?q=CONTRIBUTING.md) to learn how to set up the development environment and project structure.
+Check out our [Contributing Guide](CONTRIBUTING.md) to learn how to set up the development environment and project structure.
