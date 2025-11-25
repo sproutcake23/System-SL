@@ -3,30 +3,29 @@ import random
 import os
 
 
-def get_tasks_file_path():
+def get_tasks_file_path(filename):
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(curr_dir))
 
-    return os.path.join(project_root, "data", "tasks.json")
+    return os.path.join(project_root, "data", filename)
 
 
-TASKS_FILE_PATH = get_tasks_file_path()
+TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
+COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
-
-def load_tasks():
-    if not os.path.exists(TASKS_FILE_PATH):
-        print("tasks.json not found")
+def load_data(filepath):
+    if not os.path.exists(filepath):
+        print(f"File {os.path.basename(filepath)} not found. Creating it.")
         try:
-            print("Creating tasks.json")
-            os.makedirs(os.path.dirname(TASKS_FILE_PATH), exist_ok=True)
-            with open(TASKS_FILE_PATH, "w", encoding="utf-8") as f:
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write("{}")
             return {}
         except Exception as e:
-            print(f"Could not create tasks file {e}")
+            print(f"Could not create file {filepath}: {e}")
             return {}
     try:
-        with open(TASKS_FILE_PATH, "r", encoding="utf-8") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = f.read().strip()
 
             if not data:
@@ -38,14 +37,16 @@ def load_tasks():
         return {}
 
 
-def save_tasks(tasks: dict):
-    tasks_file_path = TASKS_FILE_PATH
+def save_data(filepath,tasks: dict):
     try:
-        with open(tasks_file_path, "w", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(tasks, f, indent=4)
     except Exception as e:
-        print(f"Could not save tasks to the file {e}")
+        print(f"Could not save data to the file {filepath}: {e}")
 
+def save_tasks(tasks: dict):
+    save_data(TASKS_FILE_PATH, tasks)
 
 def add_tasks(task_type: str, task_title: str):
     if not isinstance(task_type, str) or not task_type.strip():
@@ -109,3 +110,24 @@ def get_random_task():
 
     return cat_key, rand_task
 
+# Method for completed task
+
+def load_tasks():
+    return load_data(TASKS_FILE_PATH)
+
+def load_completed_tasks():
+    # The original load_completed_tasks was simpler, but now uses the robust load_data
+    return load_data(COMPLETED_TASKS_FILE_PATH)
+
+def save_completed_tasks(tasks: dict):
+    save_data(COMPLETED_TASKS_FILE_PATH, tasks)
+
+def mark_task_completed(task_type: str, task_title: str):
+    removed_title = remove_tasks(task_type, task_title)
+    completed_tasks = load_completed_tasks()
+    if task_type not in completed_tasks:
+        completed_tasks[task_type] = []
+    if task_title not in completed_tasks[task_type]:
+        completed_tasks[task_type].append(task_title)
+    save_completed_tasks(completed_tasks)
+    return removed_title 
