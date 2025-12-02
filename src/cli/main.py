@@ -1,5 +1,6 @@
 import sys
 from src.core.tasks import load_tasks,add_tasks,remove_tasks,get_random_task,mark_task_completed
+from src.core.calendar import sync_calendar_events
 
 def print_menu():
     print(f"\n{'-'*5}Manage your tasks{'-'*5}")
@@ -7,6 +8,7 @@ def print_menu():
     print("(s)View Tasks")
     print("(r)Remove a Task")
     print("(c)Task Completed")
+    print("(g) Sync Google Calendar")
     print("(q)Exit")
     print("-"*27)
 
@@ -31,16 +33,29 @@ def view_tasks(tasks):
     if not tasks:
         print("No tasks found, add some tasks first")
         return
+    def print_task(t):
+        # Handle display for dictionary objects
+        title = t['title']
+        deadline = t.get('deadline')
+        added = t.get('created_at')
+        
+        due_str = f" | Due: {deadline}" if deadline else ""
+        added_str = f" (Added: {added})" if added else ""
+        print(f"  - {title}{due_str}{added_str}")
+
     if choice=='a':
         for category,items in tasks.items():
-            print(f"{category}: {items}")
+            print(f"\n[{category.upper()}]") 
+            for item in items:
+                print_task(item)
+
     elif choice=='c':
         category = input("Enter the task category :").strip().lower()
         tasks_list = tasks.get(category)
         if tasks_list:
             print(f"Tasks listed in {category} category are :\n")
             for task in tasks_list:
-                print(f"{task}\n")
+                print_task(task)
         else:
             print(f"Tasks of {category} category not found")
     elif choice=='r':
@@ -82,6 +97,9 @@ def main():
         elif choice == 'c':
             task_type,task_title = inp()  
             task_Completed(task_type,task_title)
+        elif choice == 'g':
+            sync_calendar_events()
+            
         elif choice=='q':
             sys.exit(0)
         
