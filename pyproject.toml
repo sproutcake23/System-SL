@@ -11,6 +11,9 @@ requires-python = ">=3.10"
 
 dependencies = [
   "plyer",
+  "google-api-python-client",
+  "google-auth-httplib2",
+  "google-auth-oauthlib",
 ]
 
 [tool.setuptools.packages]
