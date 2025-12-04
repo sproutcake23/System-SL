@@ -81,6 +81,7 @@ def inp():
  
 def main():
     print("SYSTEM welcomes you")
+    sync_calendar_events()
     while True:
         print_menu()
         choice = input("Enter your choice :").strip().lower()
