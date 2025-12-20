@@ -3,6 +3,7 @@ import random
 import os
 from datetime import datetime
 
+
 def get_tasks_file_path(filename):
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(curr_dir))
@@ -12,6 +13,7 @@ def get_tasks_file_path(filename):
 
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
 COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
+
 
 def load_data(filepath):
     if not os.path.exists(filepath):
@@ -37,7 +39,7 @@ def load_data(filepath):
         return {}
 
 
-def save_data(filepath,tasks: dict):
+def save_data(filepath, tasks: dict):
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w", encoding="utf-8") as f:
@@ -45,35 +47,38 @@ def save_data(filepath,tasks: dict):
     except Exception as e:
         print(f"Could not save data to the file {filepath}: {e}")
 
+
 def load_tasks():
     data = load_data(TASKS_FILE_PATH)
-    
+
     migrated = False
     for category, task_list in data.items():
         new_list = []
         for task in task_list:
             if isinstance(task, str):
-                
-                new_list.append({
-                    "title": task,
-                    "created_at": datetime.now().isoformat(),
-                    "deadline": None
-                })
+                new_list.append(
+                    {
+                        "title": task,
+                        "created_at": datetime.now().isoformat(),
+                        "deadline": None,
+                    }
+                )
                 migrated = True
             else:
                 new_list.append(task)
         data[category] = new_list
-    
+
     if migrated:
         save_tasks(data)
-        
+
     return data
+
 
 def save_tasks(tasks: dict):
     save_data(TASKS_FILE_PATH, tasks)
 
-def add_tasks(task_type: str, task_title: str, deadline: str = None):
 
+def add_tasks(task_type: str, task_title: str, deadline: str = None):
     if not isinstance(task_type, str) or not task_type.strip():
         raise ValueError("Task type must be a non-empty string")
 
@@ -89,31 +94,27 @@ def add_tasks(task_type: str, task_title: str, deadline: str = None):
 
     for task in tasks[task_type]:
         if task["title"] == task_title:
-
             if deadline and task.get("deadline") != deadline:
                 task["deadline"] = deadline
                 save_tasks(tasks)
 
                 print(f"Updated deadline for '{task_title}' to {deadline}")
                 return task_title
-            
 
             raise ValueError(f"Task '{task_title}' already exists in {task_type}")
 
-
     new_task = {
         "title": task_title,
-
         "created_at": datetime.now().isoformat(),
-        "deadline": deadline 
+        "deadline": deadline,
     }
 
     tasks[task_type].append(new_task)
     save_tasks(tasks)
     return task_title
 
-def remove_tasks(task_type: str, task_title: str):
 
+def remove_tasks(task_type: str, task_title: str):
     if not isinstance(task_type, str) or not task_type.strip():
         raise ValueError("Task type must be a non-empty string")
 
@@ -151,29 +152,28 @@ def get_random_task():
 
     return cat_key, rand_task_obj["title"]
 
-# Method for completed task
 
 def load_completed_tasks():
-
     return load_data(COMPLETED_TASKS_FILE_PATH)
+
 
 def save_completed_tasks(tasks: dict):
     save_data(COMPLETED_TASKS_FILE_PATH, tasks)
 
-def mark_task_completed(task_type: str, task_title: str):
 
+def mark_task_completed(task_type: str, task_title: str):
     removed_title = remove_tasks(task_type, task_title)
-    
+
     completed_tasks = load_completed_tasks()
     if task_type not in completed_tasks:
         completed_tasks[task_type] = []
-    
 
-    completion_entry = f"{task_title} (Completed: {datetime.now().strftime('%Y-%m-%d')})"
-    
+    completion_entry = (
+        f"{task_title} (Completed: {datetime.now().strftime('%Y-%m-%d')})"
+    )
 
     if completion_entry not in completed_tasks[task_type]:
         completed_tasks[task_type].append(completion_entry)
-        
+
     save_completed_tasks(completed_tasks)
     return removed_title
