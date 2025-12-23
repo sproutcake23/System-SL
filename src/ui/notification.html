@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+    <div class="system-window">
+        <div class="header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            NOTIFICATION
+        </div>
+
+        <div class="content">
+            <p id="notif-category" class="highlight"></p>
+            <p id="notif-message"></p>
+        </div>
+
+        <div class="buttons">
+             <button onclick="pywebview.api.minimize()">DISMISS</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('keydown', function(event) {
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.minimize();
+            }
+        });
+    </script>
+</body>
+</html>
