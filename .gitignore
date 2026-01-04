@@ -3,3 +3,4 @@ __pycache__/
 system_sl.egg-info/
 credentials.json
 token.json
+.idea/
