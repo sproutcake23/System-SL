@@ -77,7 +77,7 @@ def view_tasks(tasks):
             print("No tasks found")
 
 
-def task_Completed(task_type, task_title):
+def task_completed(task_type, task_title):
     try:
         mark_task_completed(task_type, task_title)
         print(f"Task '{task_title}' marked as completed and moved to history.")
@@ -93,8 +93,11 @@ def inp():
 
 def main():
     print("SYSTEM welcomes you")
-    while True:
+    try:
         sync_calendar_events()
+    except Exception as e:
+        print(f"Problem occurred while trying to connect : {e}")
+    while True:
         print_menu()
         choice = input("Enter your choice :").strip().lower()
         tasks = load_tasks()
@@ -109,9 +112,12 @@ def main():
             remove_task_mode(task_type, task_title)
         elif choice == "c":
             task_type, task_title = inp()
-            task_Completed(task_type, task_title)
+            task_completed(task_type, task_title)
         elif choice == "g":
-            sync_calendar_events()
+            try:
+                sync_calendar_events()
+            except Exception as e:
+                print(f"Problem occurred while trying to connect : {e}")
 
         elif choice == "q":
             sys.exit(0)
