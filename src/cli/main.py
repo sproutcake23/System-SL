@@ -7,6 +7,7 @@ from core.tasks import (
     mark_task_completed,
 )
 from core.calendar import sync_calendar_events
+from core.user_info import user_goal_check
 
 
 def print_menu():
@@ -95,6 +96,7 @@ def main():
     print("SYSTEM welcomes you")
     try:
         sync_calendar_events()
+        user_goal_check()
     except Exception as e:
         print(f"Problem occurred while trying to connect : {e}")
     while True:
