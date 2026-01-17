@@ -21,3 +21,28 @@ def user_goal_check(user_info_path=USER_INFO_FILE_PATH):
             return user_goal_data["goal"]
         print("ERROR: user_ info.json not found")
         return None
+
+def user_edit_goal(user_info_path=USER_INFO_FILE_PATH):
+    user_goal_data = user_goal_check(user_info_path)
+    print(f"Your current goal information is : {user_goal_data}")
+    while True:
+        goal_operation = input("Enter(d to delete,a to add a goal keyword,q to quit to main menu)\n:")
+        if goal_operation == "d":
+            del_input = input("Enter the keyword that you would like to delete \n:")
+            if del_input in user_goal_data:
+                user_goal_data.remove(del_input)
+                print(f"Successfully deleted '{del_input}'. New list is: {user_goal_data}")
+            else:
+                print(f"ERROR: '{del_input}' is not found in the current goal list.")
+        elif goal_operation == "a":
+            add_input = input("Enter the keyword that you would like to add\n:")
+            if add_input in user_goal_data:
+                print(f"{add_input} keyword already exists in user_info.json")
+            else:
+                user_goal_data.append(add_input)
+                print(f"User goal keyword added to user_info.json : \nNew list is {user_goal_data}")
+        elif goal_operation == "q":
+            break
+        else:
+            print("Invalid input. Please try again.")
+    save_data(user_info_path,{"goal":user_goal_data})

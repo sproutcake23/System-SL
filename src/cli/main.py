@@ -7,13 +7,14 @@ from core.tasks import (
     mark_task_completed,
 )
 from core.calendar import sync_calendar_events
-from core.user_info import user_goal_check
+from core.user_info import user_goal_check,user_edit_goal
 
 
 def print_menu():
     print(f"\n{'-' * 5}Manage your tasks{'-' * 5}")
     print("(a)Add a New Task")
     print("(s)View Tasks")
+    print("(eg)Edit Goal")
     print("(r)Remove a Task")
     print("(c)Task Completed")
     print("(g) Sync Google Calendar")
@@ -120,7 +121,11 @@ def main():
                 sync_calendar_events()
             except Exception as e:
                 print(f"Problem occurred while trying to connect : {e}")
-
+        elif choice == "eg":
+            try:
+                user_edit_goal()
+            except Exception as e:
+                print(f"ERROR editing the goal : {e}")
         elif choice == "q":
             sys.exit(0)
 
