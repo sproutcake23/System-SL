@@ -1,4 +1,5 @@
 import sys
+import os
 from core.tasks import (
     load_tasks,
     add_tasks,
@@ -7,7 +8,7 @@ from core.tasks import (
     mark_task_completed,
 )
 from core.calendar import sync_calendar_events
-from core.user_info import user_goal_check,user_edit_goal
+from core.user_info import user_goal_check, user_edit_goal
 
 
 def print_menu():
@@ -17,7 +18,7 @@ def print_menu():
     print("(eg)Edit Goal")
     print("(r)Remove a Task")
     print("(c)Task Completed")
-    print("(g) Sync Google Calendar")
+    print("(g)Sync Google Calendar")
     print("(q)Exit")
     print("-" * 27)
 
@@ -131,8 +132,9 @@ def main():
 
         else:
             print("Please enter valid input")
+        input("Enter any key to continue" + "." * 40)
+        os.system("cls" if os.name == "nt" else "clear")
 
 
 if __name__ == "__main__":
     main()
-
