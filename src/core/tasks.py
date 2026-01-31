@@ -115,9 +115,6 @@ def add_tasks(task_type: str, task_title: str, deadline: str = None):
 
 
 def remove_tasks(task_type: str, task_title: str):
-    if not isinstance(task_type, str) or not task_type.strip():
-        raise ValueError("Task type must be a non-empty string")
-
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
