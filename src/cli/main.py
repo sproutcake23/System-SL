@@ -1,4 +1,5 @@
 import sys
+import os
 from core.tasks import (
     load_tasks,
     add_tasks,
@@ -7,15 +8,17 @@ from core.tasks import (
     mark_task_completed,
 )
 from core.calendar import sync_calendar_events
+from core.user_info import user_goal_check, user_edit_goal
 
 
 def print_menu():
     print(f"\n{'-' * 5}Manage your tasks{'-' * 5}")
     print("(a)Add a New Task")
     print("(s)View Tasks")
+    print("(eg)Edit Goal")
     print("(r)Remove a Task")
     print("(c)Task Completed")
-    print("(g) Sync Google Calendar")
+    print("(g)Sync Google Calendar")
     print("(q)Exit")
     print("-" * 27)
 
@@ -77,7 +80,7 @@ def view_tasks(tasks):
             print("No tasks found")
 
 
-def task_Completed(task_type, task_title):
+def task_completed(task_type, task_title):
     try:
         mark_task_completed(task_type, task_title)
         print(f"Task '{task_title}' marked as completed and moved to history.")
@@ -93,8 +96,12 @@ def inp():
 
 def main():
     print("SYSTEM welcomes you")
-    while True:
+    try:
         sync_calendar_events()
+        user_goal_check()
+    except Exception as e:
+        print(f"Problem occurred while trying to connect : {e}")
+    while True:
         print_menu()
         choice = input("Enter your choice :").strip().lower()
         tasks = load_tasks()
@@ -109,17 +116,25 @@ def main():
             remove_task_mode(task_type, task_title)
         elif choice == "c":
             task_type, task_title = inp()
-            task_Completed(task_type, task_title)
+            task_completed(task_type, task_title)
         elif choice == "g":
-            sync_calendar_events()
-
+            try:
+                sync_calendar_events()
+            except Exception as e:
+                print(f"Problem occurred while trying to connect : {e}")
+        elif choice == "eg":
+            try:
+                user_edit_goal()
+            except Exception as e:
+                print(f"ERROR editing the goal : {e}")
         elif choice == "q":
             sys.exit(0)
 
         else:
             print("Please enter valid input")
+        input("Enter any key to continue" + "." * 40)
+        os.system("cls" if os.name == "nt" else "clear")
 
 
 if __name__ == "__main__":
     main()
-
