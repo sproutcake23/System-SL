@@ -7,8 +7,12 @@ from datetime import datetime
 def get_tasks_file_path(filename):
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(curr_dir))
+    data_path = os.path.join(project_root, "data")
 
-    return os.path.join(project_root, "data", filename)
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
+
+    return os.path.join(data_path, filename)
 
 
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
