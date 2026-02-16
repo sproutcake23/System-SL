@@ -109,7 +109,7 @@ def add_tasks(task_type: str, task_title: str, deadline: str = None):
 
     new_task = {
         "title": task_title,
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "deadline": deadline,
     }
 
