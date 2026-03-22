@@ -5,7 +5,6 @@
   Runs automatically when user launches SL for the first time
   Collects semantic profile for intelligent task prioritization
   
-  Location: src/core/onboarding.py
 """
 
 import json
@@ -309,6 +308,4 @@ def force_run_setup():
     return onboarding.run()
 
 
-# For testing
-if __name__ == "__main__":
-    check_and_run_onboarding()
+
