@@ -9,6 +9,7 @@ from core.tasks import (
 )
 from core.calendar import sync_calendar_events
 from core.user_info import user_goal_check, user_edit_goal
+from core.onboarding import check_and_run_onboarding, force_run_setup
 
 
 def print_menu():
@@ -16,6 +17,7 @@ def print_menu():
     print("(a)Add a New Task")
     print("(s)View Tasks")
     print("(eg)Edit Goal")
+    print("(ep)Edit Profile")  # Added edit profile
     print("(r)Remove a Task")
     print("(c)Task Completed")
     print("(g)Sync Google Calendar")
@@ -95,12 +97,25 @@ def inp():
 
 
 def main():
+    # ═══════════════════════════════════════════════════════════════
+    # FIRST-TIME ONBOARDING - Runs ONLY on first launch
+    # ═══════════════════════════════════════════════════════════════
+    try:
+        check_and_run_onboarding()
+    except Exception as e:
+        print(f"⚠️  Onboarding error: {e}")
+        print("   Continuing with default settings...\n")
+    
+    # ═══════════════════════════════════════════════════════════════
+    # Normal startup after onboarding
+    # ═══════════════════════════════════════════════════════════════
     print("SYSTEM welcomes you")
     try:
         sync_calendar_events()
         user_goal_check()
     except Exception as e:
         print(f"Problem occurred while trying to connect : {e}")
+    
     while True:
         print_menu()
         choice = input("Enter your choice :").strip().lower()
@@ -109,29 +124,43 @@ def main():
         if choice == "a":
             task_type, task_title = inp()
             add_task_mode(task_type, task_title)
+        
         elif choice == "s":
             view_tasks(tasks)
+        
         elif choice == "r":
             task_type, task_title = inp()
             remove_task_mode(task_type, task_title)
+        
         elif choice == "c":
             task_type, task_title = inp()
             task_completed(task_type, task_title)
+        
         elif choice == "g":
             try:
                 sync_calendar_events()
             except Exception as e:
                 print(f"Problem occurred while trying to connect : {e}")
+        
         elif choice == "eg":
             try:
                 user_edit_goal()
             except Exception as e:
                 print(f"ERROR editing the goal : {e}")
+        
+        # NEW: Edit Profile command
+        elif choice == "ep":
+            try:
+                force_run_setup()
+            except Exception as e:
+                print(f"ERROR editing profile : {e}")
+        
         elif choice == "q":
             sys.exit(0)
 
         else:
             print("Please enter valid input")
+        
         input("Enter any key to continue" + "." * 40)
         os.system("cls" if os.name == "nt" else "clear")
 
