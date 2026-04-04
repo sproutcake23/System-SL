@@ -1,2 +1,7 @@
-__pycache__
-venv
+/venv
+__pycache__/
+system_sl.egg-info/
+credentials.json
+token.json
+.idea/
+/data

@@ -1,8 +1,8 @@
 # ⚔️ SL — The SYSTEM
 
 > _“Arise, Player.”_  
-> A CLI-based personal progression system inspired by **Solo Leveling**.  
-> The SYSTEM assigns tasks, reminds you through the day, and tracks your growth — right from your terminal.
+> A CLI-based personal progression system inspired by **Solo Leveling**.
+> **You define your daily quests**, and the SYSTEM keeps you on track — right from your terminal.
 
 ---
 
@@ -94,3 +94,8 @@ systemctl --user daemon-reload
 systemctl --user enable system-sl.service
 systemctl --user start system-sl.service
 ```
+
+## 🤝 Contributing
+
+Want to help improve the System?  
+Check out our [Contributing Guide](CONTRIBUTING.md) to learn how to set up the development environment and project structure.
