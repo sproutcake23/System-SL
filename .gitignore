@@ -1,8 +1,12 @@
-/venv
+.venv/
+.data/
 __pycache__/
 system_sl.egg-info/
 credentials.json
 token.json
+build/
+data/
+uv.lock
 .idea/
 /data
 main.spec
