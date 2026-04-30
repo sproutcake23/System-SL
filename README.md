@@ -8,8 +8,7 @@
 
 ## 🧭 Overview
 
-**SL** is a lightweight command-line program that helps you build consistent habits and level up in real life.
-No browser, no accounts — just a self-hosted **manager** that lives on your machine, keeps track of your goals, and **reminds** you to complete them.
+**SL** is a lightweight Linux command-line program that helps you build consistent habits and level up in real life.
 
 ## 📸 Preview
 
@@ -21,10 +20,10 @@ _A notification appearing on the desktop after a task is due._
 
 ## 🚀 Features
 
-- 📝 Add, list, and complete tasks from the terminal
-- 🔔 Desktop notifications (Linux & Windows)
-- ⏰ Background reminder loop for incomplete tasks
-- 💾 Local JSON storage — no cloud, no tracking
+- 📝 **Task Management**: Add, list, and complete tasks directly from the terminal.
+- 🔔 **Native Notifications**: Desktop alerts styled with a "System" aesthetic
+- ⏰ **Background Reminder**: A persistent listener that keeps you on track without draining resources.
+- 💾 **Privacy First**: Local JSON storage — no cloud, no accounts, no tracking.
 
 ---
 
@@ -32,40 +31,69 @@ _A notification appearing on the desktop after a task is due._
 
 ### Requirements
 
-- Linux or Windows
-- Python ≥ 3.10
+- **Linux/Windows**: Fedora (tested)
+- **Python**: ≥ 3.10.
+- **Environment Manager**: [uv](https://github.com/astral-sh/uv) (recommended).
 
 ### Installation
 
 ```bash
+# Clone the repository
 git clone https://github.com/sproutcake23/System-SL.git
 cd System-SL
-python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
-pip install .
+
+# Sync the environment and dependencies
+uv sync
+
+#Activate the .venv
+source .venv/bin/activate
 ```
 
----
-
-## 🎮 Usage
-
-### 1\. Open the System (CLI)
-
-To add, view, or complete your tasks, run the interactive menu:
+### Usage
 
 ```bash
-python -m src.cli.main
+# Open the CLI menu
+uv run system-cli
+
+#Run the notifications loop manually
+uv run system-sl
 ```
 
-### 2\. Enable Reminders
+### Autostart using systemd(linux only)
 
-To receive desktop notifications, open a **separate terminal** and run the background listener:
+1. Create the service file
 
 ```bash
-python -m src.utils.notifications
+nano ~/.config/systemd/user/system-sl.service
 ```
 
----
+2. Paste the following(replace with your actual file paths)
+
+```bash
+[Unit]
+Description=System-SL Notification Listener
+After=network.target
+
+[Service]
+Type=simple
+
+WorkingDirectory=/your/working/dir/System-SL
+
+ExecStart=/your/working/dir/System-SL/.venv/bin/python -m utils.notifications
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+3. Enable and start the service
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable system-sl.service
+systemctl --user start system-sl.service
+```
 
 ## 🤝 Contributing
 
