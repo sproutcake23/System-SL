@@ -5,3 +5,8 @@ credentials.json
 token.json
 .idea/
 /data
+main.spec
+uv.lock
+pyproject.toml
+build/
+dist/
