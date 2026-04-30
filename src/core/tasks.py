@@ -2,17 +2,22 @@ import json
 import random
 import os
 from datetime import datetime
+import platform
 
 
 def get_tasks_file_path(filename):
-    curr_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(curr_dir))
-    data_path = os.path.join(project_root, "data")
+    prog_name = 'system-sl'
 
-    if not os.path.exists(data_path):
-        os.makedirs(data_path)
+    if os.name == 'nt':
+        base_dir = os.environ.get('APPDATA', os.path.expanduser("~\\AppData\\Roaming"))
+        config_dir = os.path.join(base_dir, prog_name)
+    else:
+        config_dir = os.path.join(os.path.expanduser("~"),".config",prog_name)
 
-    return os.path.join(data_path, filename)
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+
+    return os.path.join(config_dir, filename)
 
 
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
