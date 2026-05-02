@@ -9,7 +9,7 @@ data/
 uv.lock
 .idea/
 /data
-main.spec
+*.spec
 uv.lock
 pyproject.toml
 build/
