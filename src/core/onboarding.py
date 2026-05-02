@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════════════════════════════
   Runs automatically when user launches SL for the first time
   Collects semantic profile for intelligent task prioritization
-  
+
 """
 
 import json
@@ -15,24 +15,24 @@ from datetime import datetime
 
 class PersonaOnboarding:
     """First-time setup wizard for collecting user's semantic profile"""
-    
+
     def __init__(self):
-      # Use data directory for storing user data
+        # Use data directory for storing user data
         prog_name = "system-sl"
 
-        if os.name == 'nt':
+        if os.name == "nt":
             # Windows: AppData/Roaming/system-sl
-            base_dir = Path(os.environ.get('APPDATA', Path.home() / "AppData" / "Roaming"))
+            base_dir = Path(
+                os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")
+            )
             self.data_dir = base_dir / prog_name
         else:
             # Linux: ~/.config/system-sl
             self.data_dir = Path.home() / ".config" / prog_name
-                            
+
             self.persona_file = self.data_dir / "persona.json"
             self.setup_flag = self.data_dir / ".setup_complete"
-            
-                   
-              ``                  
+
         self.questions = [
             {
                 "id": 1,
@@ -93,19 +93,19 @@ class PersonaOnboarding:
                 "category": "VALUES",
                 "question": "What keywords describe your core professional values?",
                 "hint": "e.g., Efficient, innovative, scalable, quality",
-            }
+            },
         ]
-        
+
         self.responses = []
-    
+
     def is_first_time(self):
         """Check if this is the first time running SL"""
         return not self.setup_flag.exists()
-    
+
     def ensure_data_dir(self):
         """Create data directory if it doesn't exist"""
         self.data_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def display_welcome(self):
         """Show welcome screen with Solo Leveling theme"""
         print("\n" + "═" * 70)
@@ -125,14 +125,18 @@ class PersonaOnboarding:
     ⚡ Rate each answer's IMPACT on your journey (1-3)
         """)
         print("═" * 70)
-        
-        response = input("\n🎮 Ready to begin character creation? (yes/skip): ").strip().lower()
-        
-        if response in ['skip', 's', 'n', 'no']:
+
+        response = (
+            input("\n🎮 Ready to begin character creation? (yes/skip): ")
+            .strip()
+            .lower()
+        )
+
+        if response in ["skip", "s", "n", "no"]:
             return False
-        
+
         return True
-    
+
     def display_question(self, q):
         """Display a single question with Solo Leveling theme"""
         print(f"\n{'─' * 70}")
@@ -140,97 +144,99 @@ class PersonaOnboarding:
         print(f"{'─' * 70}")
         print(f"\n❓ {q['question']}")
         print(f"💡 Example: {q['hint']}")
-    
+
     def get_answer(self):
         """Get and validate answer"""
         while True:
             answer = input("\n✍️  Your Answer: ").strip().lower()
-            
+
             if not answer:
                 print("   ⚠️  The SYSTEM requires an answer.")
                 continue
-            
+
             if len(answer) < 3:
                 print("   ⚠️  Answer too short. Provide meaningful keywords.")
                 continue
-            
+
             return answer
-    
+
     def get_impact(self):
         """Get and validate impact rating"""
         print("\n⚡ Impact Level:")
         print("   1 = Low     (peripheral interest)")
         print("   2 = Medium  (important focus)")
         print("   3 = High    (core identity - CRITICAL)")
-        
+
         while True:
             try:
                 rating = input("\n🎯 Impact (1/2/3): ").strip()
                 impact = int(rating)
-                
+
                 if impact in [1, 2, 3]:
                     labels = {1: "🟢 Low", 2: "🟡 Medium", 3: "🔴 High"}
                     print(f"   ✓ {labels[impact]} Impact Recorded")
                     return impact
-                
+
                 print("   ⚠️  Invalid. Enter 1, 2, or 3")
-                
+
             except ValueError:
                 print("   ⚠️  Invalid input. Enter a number (1, 2, or 3)")
-    
+
     def run_onboarding(self):
         """Execute the onboarding questionnaire"""
         for q in self.questions:
             self.display_question(q)
             answer = self.get_answer()
             impact = self.get_impact()
-            
-            self.responses.append({
-                "question_id": q['id'],
-                "category": q['category'],
-                "question": q['question'],
-                "answer": answer,
-                "impact": impact
-            })
-            
+
+            self.responses.append(
+                {
+                    "question_id": q["id"],
+                    "category": q["category"],
+                    "question": q["question"],
+                    "answer": answer,
+                    "impact": impact,
+                }
+            )
+
             # Progress with XP bar theme
-            progress = (q['id'] / len(self.questions)) * 100
+            progress = (q["id"] / len(self.questions)) * 100
             filled = int(progress / 5)
             bar = "█" * filled + "░" * (20 - filled)
             print(f"\n📊 Profile Completion: [{bar}] {progress:.0f}%")
-    
+
     def save_persona(self):
         """Save persona data to data directory"""
         self.ensure_data_dir()
-        
+
         stats = {
-            "high_count": sum(1 for r in self.responses if r['impact'] == 3),
-            "medium_count": sum(1 for r in self.responses if r['impact'] == 2),
-            "low_count": sum(1 for r in self.responses if r['impact'] == 1)
+            "high_count": sum(1 for r in self.responses if r["impact"] == 3),
+            "medium_count": sum(1 for r in self.responses if r["impact"] == 2),
+            "low_count": sum(1 for r in self.responses if r["impact"] == 1),
         }
-        
+
         persona_data = {
             "version": "1.0",
             "created_at": datetime.now().isoformat(),
             "player_name": os.getenv("USER", "Player"),
             "responses": self.responses,
-            "statistics": stats
+            "statistics": stats,
         }
-        
-        with open(self.persona_file, 'w') as f:
+
+        with open(self.persona_file, "w") as f:
             json.dump(persona_data, f, indent=2)
-        
+
         # Create setup complete flag
         self.setup_flag.touch()
-    
+
     def display_completion(self):
         """Show completion message with Solo Leveling theme"""
         stats = {
-            "high": sum(1 for r in self.responses if r['impact'] == 3),
-            "medium": sum(1 for r in self.responses if r['impact'] == 2),
-            "low": sum(1 for r in self.responses if r['impact'] == 3)
+            "high": sum(1 for r in self.responses if r["impact"] == 3),
+            "medium": sum(1 for r in self.responses if r["impact"] == 2),
+            "low": sum(1 for r in self.responses if r["impact"] == 3),
         }
-        
+
         print("\n" + "═" * 70)
         print("✨ PLAYER PROFILE CREATED ✨")
         print("═" * 70)
@@ -248,18 +254,18 @@ class PersonaOnboarding:
         """)
         print("═" * 70)
         print("\n⚔️  You may now begin your journey.\n")
-    
+
     def skip_setup(self):
         """Handle skipped setup"""
         self.ensure_data_dir()
-        
+
         print("\n⚠️  Profile creation skipped.")
         print("   You can create your profile later with: (ep) Edit Profile")
         print("   Tasks will use default prioritization until then.\n")
-        
+
         # Create flag but no persona
         self.setup_flag.touch()
-    
+
     def run(self):
         """Main onboarding flow"""
         try:
@@ -271,12 +277,12 @@ class PersonaOnboarding:
             else:
                 self.skip_setup()
                 return False
-                
+
         except KeyboardInterrupt:
             print("\n\n⚠️  Profile creation interrupted.")
             print("   Run SL again to complete setup.\n")
             return False
-        
+
         except Exception as e:
             print(f"\n❌ Error during setup: {e}")
             print("   Please report this issue.\n")
@@ -287,36 +293,33 @@ def check_and_run_onboarding():
     """
     Check if onboarding is needed and run it.
     Call this from main.py before showing the main menu.
-    
+
     Returns:
         bool: True if setup was completed/already done, False if skipped
     """
     onboarding = PersonaOnboarding()
-    
+
     if onboarding.is_first_time():
         return onboarding.run()
-    
+
     return True  # Already set up
 
 
 def force_run_setup():
     """
     Force run setup (for Edit Profile command).
-    
+
     Returns:
         bool: True if completed, False if cancelled
     """
     onboarding = PersonaOnboarding()
-    
+
     if not onboarding.is_first_time():
         print("\n⚠️  Player Profile already exists.")
         response = input("Recreate your profile? (yes/no): ").strip().lower()
-        
-        if response not in ['yes', 'y']:
+
+        if response not in ["yes", "y"]:
             print("   Cancelled.\n")
             return False
-    
+
     return onboarding.run()
-
-
-
