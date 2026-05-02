@@ -1,5 +1,8 @@
 import sys
 import os
+from PySide6.QtWidgets import QApplication
+from utils.notifications import SystemNotification
+from utils.autostart import AutostartManager
 from core.tasks import (
     load_tasks,
     add_tasks,
@@ -12,7 +15,7 @@ from core.user_info import user_goal_check, user_edit_goal
 from core.onboarding import check_and_run_onboarding, force_run_setup
 
 
-def print_menu():
+def print_menu(autostart_status):
     print(f"\n{'-' * 5}Manage your tasks{'-' * 5}")
     print("(a)Add a New Task")
     print("(s)View Tasks")
@@ -21,6 +24,7 @@ def print_menu():
     print("(r)Remove a Task")
     print("(c)Task Completed")
     print("(g)Sync Google Calendar")
+    print(f"(as)Toggle Autostart [Current status: {autostart_status}]")
     print("(q)Exit")
     print("-" * 27)
 
@@ -48,7 +52,6 @@ def view_tasks(tasks):
         return
 
     def print_task(t):
-        # Handle display for dictionary objects
         title = t["title"]
         deadline = t.get("deadline")
         added = t.get("created_at")
@@ -97,6 +100,12 @@ def inp():
 
 
 def main():
+    if "--bg" in sys.argv:
+        app = QApplication(sys.argv)
+        notif = SystemNotification()
+        notif.refresh_task()
+        sys.exit(app.exec())
+
     # ═══════════════════════════════════════════════════════════════
     # FIRST-TIME ONBOARDING - Runs ONLY on first launch
     # ═══════════════════════════════════════════════════════════════
@@ -110,14 +119,19 @@ def main():
     # Normal startup after onboarding
     # ═══════════════════════════════════════════════════════════════
     print("SYSTEM welcomes you")
+    manager = AutostartManager()
+
     try:
         sync_calendar_events()
         user_goal_check()
     except Exception as e:
         print(f"Problem occurred while trying to connect : {e}")
+
     
     while True:
-        print_menu()
+        status = "ON" if manager.is_enabled() else "OFF"
+        print_menu(status)
+
         choice = input("Enter your choice :").strip().lower()
         tasks = load_tasks()
 
@@ -147,6 +161,15 @@ def main():
                 user_edit_goal()
             except Exception as e:
                 print(f"ERROR editing the goal : {e}")
+
+        elif choice == "as":
+            if os.name == "nt":
+                print("Autostart toggle is only available for linux right now\n")
+                input("\nPress any key to return to menu\n")
+                continue
+            new_state = manager.toggle()
+            print(f"Autostart is now {'ENABLED' if new_state else 'DISABLED'}")
+
         
         # NEW: Edit Profile command
         elif choice == "ep":
@@ -157,9 +180,10 @@ def main():
         
         elif choice == "q":
             sys.exit(0)
-
         else:
             print("Please enter valid input")
+
+        input("\nEnter any key to continue" + "." * 40)
         
         input("Enter any key to continue" + "." * 40)
         os.system("cls" if os.name == "nt" else "clear")
