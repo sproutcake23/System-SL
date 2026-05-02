@@ -17,10 +17,19 @@ class PersonaOnboarding:
     """First-time setup wizard for collecting user's semantic profile"""
     
     def __init__(self):
-        # Use data directory for storing user data
-        self.data_dir = Path(__file__).parent.parent.parent / "data"
-        self.persona_file = self.data_dir / "persona.json"
-        self.setup_flag = self.data_dir / ".setup_complete"
+        # follow the XDG standard
+        prog_name = "system-sl"
+           
+                if os.name == 'nt':
+                    # Windows: AppData/Roaming/system-sl
+                    base_dir = Path(os.environ.get('APPDATA', Path.home() / "AppData" / "Roaming"))
+                    self.data_dir = base_dir / prog_name
+                else:
+                    # Linux: ~/.config/system-sl
+                    self.data_dir = Path.home() / ".config" / prog_name
+                    
+                self.persona_file = self.data_dir / "persona.json"
+                self.setup_flag = self.data_dir / ".setup_complete"
         
         self.questions = [
             {
