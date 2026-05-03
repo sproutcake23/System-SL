@@ -31,6 +31,8 @@ class SystemNotification(QWidget):
 
     def _setup_ui(self):
         self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
         self.container = QFrame()
         self.container.setObjectName("systemWindow")
         self.container_layout = QVBoxLayout(self.container)
@@ -90,7 +92,10 @@ class SystemNotification(QWidget):
 
     def _apply_styles(self):
         self.setStyleSheet("""
-            QWidget { font-family: 'Montserrat', sans-serif; }
+            QWidget {
+                background: transparent;
+                font-family: 'Montserrat', sans-serif;
+            }
             #systemWindow {
                 background-color: rgba(5, 10, 20, 240);
                 border: 1px solid rgba(0, 210, 255, 0.5);

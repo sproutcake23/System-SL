@@ -19,8 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-system-sl = "utils.notifications:main"
-system-cli = "cli.main:main"
+system-sl = "cli.main:main"
 
 [tool.setuptools]
 include-package-data = true
