@@ -58,7 +58,9 @@ def install_the_system():
         $Shortcut.WorkingDirectory = "{install_dir}"
         $Shortcut.Save()
         """
-        subprocess.run(["powershell", "-Command", ps_script], capture_output=True)
+        subprocess.run(
+            ["powershell.exe", "-Command", ps_script], capture_output=True, shell=True
+        )
 
     print("\n✅ INSTALLATION COMPLETE")
     print("You can now delete the original folder. 'THE SYSTEM' shortcut is installed")
