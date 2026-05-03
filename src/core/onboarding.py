@@ -30,8 +30,8 @@ class PersonaOnboarding:
             # Linux: ~/.config/system-sl
             self.data_dir = Path.home() / ".config" / prog_name
 
-            self.persona_file = self.data_dir / "persona.json"
-            self.setup_flag = self.data_dir / ".setup_complete"
+        self.persona_file = self.data_dir / "persona.json"
+        self.setup_flag = self.data_dir / ".setup_complete"
 
         self.questions = [
             {
