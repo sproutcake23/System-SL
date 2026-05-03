@@ -8,11 +8,15 @@
 
 ## 🧭 Overview
 
-**SL** is a lightweight Linux command-line program that helps you build consistent habits and level up in real life.
+**SL** is a lightweight command-line program that helps you build consistent habits and level up in real life.
 
 ## 📸 Preview
 
-![The System in Action](assets/demo.gif)
+![Menu Launch](assets/menu_launch.webp)
+
+_Launching of CLI menu_
+
+![Toggle Autostart](assets/toggle_autostart.webp)
 
 _A notification appearing on the desktop after a task is due._
 
@@ -20,10 +24,14 @@ _A notification appearing on the desktop after a task is due._
 
 ## 🚀 Features
 
+- 🧠 **Persona Builder**: A 10-step onboarding process that constructs your Player Profile to prioritize tasks based on your real-world ambitions.
 - 📝 **Task Management**: Add, list, and complete tasks directly from the terminal.
-- 🔔 **Native Notifications**: Desktop alerts styled with a "System" aesthetic
-- ⏰ **Background Reminder**: A persistent listener that keeps you on track without draining resources.
-- 💾 **Privacy First**: Local JSON storage — no cloud, no accounts, no tracking.
+- 📅 **Google Calendar Sync**: Automatically import your tasks. (Note: Requires credentials.json from Google Cloud Console in the data directory).
+- 🔔 **Native Notifications**: Desktop alerts styled with a "System" aesthetic.
+- ⏰ **Background Reminder**: A persistent listener that keeps you on track.
+- ⚙️ **Integrated Autostart**: Toggle the background service directly from the CLI menu.
+- 🛠️ **Zero-Friction Install**: A dedicated installer script for instant desktop shortcuts and global PATH access.
+- 💾 **Privacy First**: Local JSON storage
 
 ---
 
@@ -31,11 +39,24 @@ _A notification appearing on the desktop after a task is due._
 
 ### Requirements
 
-- **Linux/Windows**: Fedora (tested)
+- **Linux/Windows**: Fedora 43 KDE Plasma(tested), Windows 11(tested)
 - **Python**: ≥ 3.10.
 - **Environment Manager**: [uv](https://github.com/astral-sh/uv) (recommended).
 
 ### Installation
+
+### Option A: Install directly from releases
+
+1. **Download** the ZIP file corresponding to your OS from the [Latest Release](https://github.com/sproutcake23/System-SL/releases):
+   - 🪟 `system-sl-windows.zip`
+   - 🐧 `system-sl-linux.zip`
+2. **Unzip** the folder to a location of your choice.
+3. **Run the Installer**:
+   ```bash
+   python install.py
+   ```
+
+### Option B: Install from source
 
 ```bash
 # Clone the repository
@@ -45,54 +66,37 @@ cd System-SL
 # Sync the environment and dependencies
 uv sync
 
-#Activate the .venv
+# Activate the .venv
+# Linux/macOS:
 source .venv/bin/activate
+# Windows:
+.venv\Scripts\activate
 ```
 
 ### Usage
 
-```bash
-# Open the CLI menu
-uv run system-cli
+#### If installed from source
 
-#Run the notifications loop manually
+```bash
+#to open cli menu
 uv run system-sl
+
+#for notification loop
+uv run system-sl --bg
 ```
 
-### Autostart using systemd(linux only)
+#### If installed using Option A (Installer)
 
-1. Create the service file
+Terminal
 
 ```bash
-nano ~/.config/systemd/user/system-sl.service
+system-sl
 ```
 
-2. Paste the following(replace with your actual file paths)
+Desktop
 
-```bash
-[Unit]
-Description=System-SL Notification Listener
-After=network.target
-
-[Service]
-Type=simple
-
-WorkingDirectory=/your/working/dir/System-SL
-
-ExecStart=/your/working/dir/System-SL/.venv/bin/python -m utils.notifications
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-```
-
-3. Enable and start the service
-
-```bash
-systemctl --user daemon-reload
-systemctl --user enable system-sl.service
-systemctl --user start system-sl.service
+```text
+Use the generated shortcut on your Desktop or Start Menu.
 ```
 
 ## 🤝 Contributing
