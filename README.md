@@ -111,7 +111,7 @@ This configures the pop-up screen that asks for your permission to sync.
 
 ---
 
-### 🚀 What to Expect on Your First Run
+### What to Expect on Your First Run
 The first time you run the sync command in System-SL, a browser window will automatically open:
 1. Google will ask you to choose your account.
 2. You will see a warning screen saying **"Google hasn’t verified this app."** Don't panic! This just means you wrote the code yourself and haven't paid Google to formally review it. 
