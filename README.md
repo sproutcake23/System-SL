@@ -72,7 +72,53 @@ source .venv/bin/activate
 # Windows:
 .venv\Scripts\activate
 ```
+## Set Up Google Calendar & Tasks Sync
+To allow System-SL to securely read your Google Calendar and Google Tasks, you need to generate a private ID card from Google called a `credentials.json` file. 
 
+Because your data is private, Google requires you to generate this file yourself. It takes about 5 minutes, and you only have to do it once!
+
+### Phase 1: Create a Google Cloud Project
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and log in with your primary Google account.
+2. Click the project dropdown at the top-left of the screen and click **New Project**.
+3. Name the project `System-SL-Sync` (or anything you like) and click **Create**.
+4. Make sure your new project is selected in the top-left dropdown.
+
+### Phase 2: Enable the APIs
+Your project needs explicit permission to talk to your Calendar and Tasks.
+1. Under the Dashboard, navigate to **APIs & Services** > **Library**.
+2. Search for **Google Calendar API**, click on it, and hit **Enable**.
+3. Go back to the Library, search for **Google Tasks API**, click on it, and hit **Enable**.
+
+### Phase 3: Set Up the Consent Screen
+This configures the pop-up screen that asks for your permission to sync.
+1. In the APIs and services, go to **APIs & Services** > **OAuth consent screen**.
+2. Choose **External** and click **Create**.
+3. Fill out the required fields:
+   * **App name:** `System-SL`
+   * **User support email:** (Your email)
+   * **Developer contact info:** (Your email)
+4. Click **Save and Continue** through the "Scopes" screen (you don't need to add anything here).
+5. On the **Test users** screen, click **+ Add Users** and type in your own Google email address. *Note: Only emails listed here will be allowed to use your sync feature!*
+6. Click **Save and Continue**.
+
+### Phase 4: Download Your Credentials
+1. In the APIs and services, click on **Credentials**.
+2. Click **+ Create Credentials** at the top and select **OAuth client ID**.
+3. Under "Application type," select **Desktop app**.
+4. Name it `System-SL CLI` and click **Create**.
+5. A pop-up will appear with your new Client ID and Secret. Click the **DOWNLOAD JSON** button.
+6. Find the downloaded file on your computer, rename it to exactly **`credentials.json`**, and move it into the main `System-SL` folder where the script runs.
+
+---
+
+### 🚀 What to Expect on Your First Run
+The first time you run the sync command in System-SL, a browser window will automatically open:
+1. Google will ask you to choose your account.
+2. You will see a warning screen saying **"Google hasn’t verified this app."** Don't panic! This just means you wrote the code yourself and haven't paid Google to formally review it. 
+3. Click **Advanced** at the bottom, then click **Go to System-SL-Sync (unsafe)**.
+4. Click **Continue/Allow** to grant access.
+
+Once complete, you can close the browser. System-SL will automatically generate a hidden `token.json` file, and from now on, your syncs will happen quietly in the background!
 ### Usage
 
 #### If installed from source
