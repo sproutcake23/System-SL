@@ -10,7 +10,7 @@ from core.tasks import (
     get_random_task,
     mark_task_completed,
 )
-from core.calendar import sync_calendar_events
+from core.calendar import sync_calendar_events , sync_google_tasks
 from core.user_info import user_goal_check, user_edit_goal
 from core.onboarding import check_and_run_onboarding, force_run_setup
 
@@ -23,7 +23,7 @@ def print_menu(autostart_status):
     print("(ep)Edit Profile")  # Added edit profile
     print("(r)Remove a Task")
     print("(c)Task Completed")
-    print("(g)Sync Google Calendar")
+    print("(g)Sync Google Calendar & Event")
     print(f"(as)Toggle Autostart [Current status: {autostart_status}]")
     print("(q)Exit")
     print("-" * 27)
@@ -123,6 +123,7 @@ def main():
 
     try:
         sync_calendar_events()
+        sync_google_tasks()
         user_goal_check()
     except Exception as e:
         print(f"Problem occurred while trying to connect : {e}")
@@ -153,6 +154,7 @@ def main():
         elif choice == "g":
             try:
                 sync_calendar_events()
+                sync_google_tasks()
             except Exception as e:
                 print(f"Problem occurred while trying to connect : {e}")
         
