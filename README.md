@@ -92,13 +92,14 @@ Your project needs explicit permission to talk to your Calendar and Tasks.
 ### Phase 3: Set Up the Consent Screen
 This configures the pop-up screen that asks for your permission to sync.
 1. In the APIs and services, go to **APIs & Services** > **OAuth consent screen**.
-2. Choose **External** and click **Create**.
-3. Fill out the required fields:
-   * **App name:** `System-SL`
-   * **User support email:** (Your email)
+2. You will see Google auth platform not configured yet Click on **Get Started**
+3. App information:
+   * **App Name** : **System-SL** 
+   * **User suport email** : **(Your email)** 
+   * Choose **External** in the audiance and click **Next**.
    * **Developer contact info:** (Your email)
-4. Click **Save and Continue** through the "Scopes" screen (you don't need to add anything here).
-5. On the **Test users** screen, click **+ Add Users** and type in your own Google email address. *Note: Only emails listed here will be allowed to use your sync feature!*
+   * Tick **check box** and **Continue** & **Create**
+5. On the **audiance**>**Test users** , click **+ Add Users** and type in your own Google email address. *Note: Only emails listed here will be allowed to use your sync feature!*
 6. Click **Save and Continue**.
 
 ### Phase 4: Download Your Credentials
