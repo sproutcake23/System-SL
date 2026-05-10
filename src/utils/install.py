@@ -3,7 +3,47 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+def migrate_credentials():
+    """
+    Scans for credentials.json in common locations (Installer folder & Downloads)
+    and moves it to the persistent system data directory.
+    """
+    # 1. Define Potential Sources
+    script_dir = Path(__file__).parent.absolute()
+    downloads_dir = Path.home() / "Downloads"
+    
+    potential_sources = [
+        script_dir / "credentials.json",     # Current folder
+        downloads_dir / "credentials.json"   # System Downloads folder
+    ]
+    
+    # 2. Define Destination
+    try:
+        from core.tasks import get_tasks_file_path
+        target_path = Path(get_tasks_file_path("credentials.json"))
+    except ImportError:
+        print("⚠️  Warning: Could not import core.tasks. Migration skipped.")
+        return
 
+    # 3. Search and Move
+    found_source = None
+    for src in potential_sources:
+        if src.exists():
+            found_source = src
+            break
+            
+    if found_source:
+        print(f"Found Google credentials at: {found_source}")
+        print(f"Migrating to: {target_path.parent}...")
+        try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(found_source, target_path)
+            print("✅ Credentials migrated successfully.")
+        except Exception as e:
+            print(f"❌ Error migrating credentials: {e}")
+    else:
+        print("ℹ️  credentials.json not found in Downloads or current folder. Skipping migration.")
 
 def install_the_system():
     script_dir = Path(__file__).parent.absolute()
@@ -30,6 +70,8 @@ def install_the_system():
     if os.name != "nt":
         os.chmod(target_path, 0o755)
 
+    migrate_credentials()
+    
     print("⚔️  Forging the shortcut...")
 
     if os.name != "nt":
