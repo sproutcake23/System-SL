@@ -4,7 +4,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from core.tasks import add_tasks
+from core.tasks import add_tasks, get_tasks_file_path
+
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -13,21 +14,25 @@ SCOPES = [
 
 
 def get_credentials():
+    creds_path = get_tasks_file_path("credentials.json")
+    token_path = get_tasks_file_path("token.json")
+    
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            if not os.path.exists("credentials.json"):
-                print("ERROR: credentials.json not found. Please download it from Google Cloud Console.")
+            if not os.path.exists(creds_path):
+
+                print(f"ERROR: credentials.json not found at {creds_path}. Please download it from Google Cloud Console & run the install.py to setup.")
                 return None
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
             creds = flow.run_local_server(port=0)
 
-        with open("token.json", "w") as token:
+        with open(token_path, "w") as token:
             token.write(creds.to_json())
 
     return creds
@@ -62,15 +67,20 @@ def sync_calendar_events(max_results=10):
     if not creds:
         return
     service = build("calendar", "v3", credentials=creds)
-    now = datetime.datetime.utcnow().isoformat() + "Z"
-    print(f"Fetching upcoming {max_results} events...")
+
+    now = datetime.datetime.utcnow()
+    now_iso = now.isoformat() + "Z"
+    six_months_later = now + datetime.timedelta(days=182)
+    time_max_iso = six_months_later.isoformat() + "Z"
+    print(f"Fetching upcoming events until {six_months_later.strftime('%Y-%m-%d')}...")
 
     try:
         events_result = (
             service.events()
             .list(
                 calendarId="primary",
-                timeMin=now,
+                timeMin=now_iso,
+                timeMax=time_max_iso,
                 maxResults=max_results,
                 singleEvents=True,
                 orderBy="startTime",
@@ -102,10 +112,15 @@ def sync_google_tasks(max_results=10):
         return
     
     service = build("tasks", "v1", credentials=creds)
-    print(f"Fetching up to {max_results} tasks per list...")
+
+    now = datetime.datetime.utcnow()
+    six_months_later = now + datetime.timedelta(days=182)
+    time_max_iso = six_months_later.isoformat() + "Z"
+
+    print(f"Fetching tasks due until {six_months_later.strftime('%Y-%m-%d')}...")
 
     try:
-        # Step 1: Fetch the user's task lists
+       
         lists_result = service.tasklists().list(maxResults=10).execute()
         task_lists = lists_result.get("items", [])
     except Exception as e:
@@ -124,6 +139,7 @@ def sync_google_tasks(max_results=10):
                 .list(
                     tasklist=task_list["id"],
                     maxResults=max_results,
+                    dueMax=time_max_iso,
                     showHidden=False,  # Set to True if you want to include completed tasks
                 )
                 .execute()
