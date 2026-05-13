@@ -10,7 +10,7 @@ from core.tasks import (
     get_random_task,
     mark_task_completed,
 )
-from core.calendar import sync_calendar_events
+from core.calendar_self import sync_calendar_events
 from core.user_info import user_goal_check, user_edit_goal
 from core.onboarding import check_and_run_onboarding, force_run_setup
 

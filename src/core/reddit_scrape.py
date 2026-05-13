@@ -3,6 +3,7 @@ import ssl
 import urllib.request
 import time
 import json
+import os
 
 domains = ["deeplearning"]
 
@@ -48,9 +49,14 @@ def scrape_feeds(domain, top_n):
                         # --- COMMENTS EXTRACTION ---
                         comments_list = data[1]['data']['children']
                         top_3_comments = comments_list[:3]
+                        
+                        
+                        current_dir = os.path.dirname(os.path.abspath(__file__))
 
+                        # 2. Join it with the name of the file you want to run
+                        save_path = os.path.join(current_dir, "scrape_content/reddit_content.md")
                         # --- WRITE TO MARKDOWN ---
-                        with open("reddit_content.md", "a", encoding="utf-8") as file:
+                        with open(save_path, "a", encoding="utf-8") as file:
                             file.write(f"# {entry.title}\n\n")
                             file.write(f"**Post Author:** u/{post_author}  \n")
                             file.write(f"**Reddit Link:** [View Discussion]({base_link})\n\n")
@@ -85,13 +91,17 @@ def scrape_feeds(domain, top_n):
         print(f"Error scraping {domain}: {e}")
 
 if __name__ == "__main__":
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # 2. Join it with the name of the file you want to run
+    save_path = os.path.join(current_dir, "scrape_content/reddit_content.md")
     # Create file and write a clean header
-    with open("reddit_content.md", "w", encoding="utf-8") as f:
+    with open(save_path, "w", encoding="utf-8") as f:
         f.write("# Reddit Deep Learning Digest\n")
         f.write(f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
     
-    # for domain in domains:
-    #     scrape_feeds(domain, 10)
+    for domain in domains:
+        scrape_feeds(domain, 10)
 
 
     # import feedparser
@@ -100,10 +110,10 @@ if __name__ == "__main__":
     # If you have the data in a string variable, use: feed = feedparser.parse(xml_string)
 
 
-    feed = feedparser.parse("https://hnrss.org/frontpage")
-    with open("hacker_news.md", "w", encoding="utf-8") as f:
-        f.write("# Hacker News\n")
-        f.write(f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        for entry in feed.entries[:10]:
-            f.write(f"- [{entry.title}]({entry.link})\n\n")
+    # feed = feedparser.parse("https://hnrss.org/frontpage")
+    # with open("hacker_news.md", "w", encoding="utf-8") as f:
+    #     f.write("# Hacker News\n")
+    #     f.write(f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+    #     for entry in feed.entries[:10]:
+    #         f.write(f"- [{entry.title}]({entry.link})\n\n")
 
