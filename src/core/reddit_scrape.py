@@ -10,7 +10,7 @@ domains = ["deeplearning"]
 def reddit_link_template(domain, format_type):
     return f"https://www.reddit.com/r/{domain}/.{format_type}"
 
-def scrape_feeds(domain, top_n):
+def scrape_feeds(domain, top_n, save_path):
     all_articles = []
     
     if hasattr(ssl, '_create_unverified_context'):
@@ -51,10 +51,7 @@ def scrape_feeds(domain, top_n):
                         top_3_comments = comments_list[:3]
                         
                         
-                        current_dir = os.path.dirname(os.path.abspath(__file__))
 
-                        # 2. Join it with the name of the file you want to run
-                        save_path = os.path.join(current_dir, "scrape_content/reddit_content.md")
                         # --- WRITE TO MARKDOWN ---
                         with open(save_path, "a", encoding="utf-8") as file:
                             file.write(f"# {entry.title}\n\n")
@@ -94,7 +91,7 @@ if __name__ == "__main__":
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 2. Join it with the name of the file you want to run
-    save_path = os.path.join(current_dir, "scrape_content/reddit_content.md")
+    save_path = os.path.join(current_dir, "../knowledge_base/raw/reddit_content.md")
     # Create file and write a clean header
     with open(save_path, "w", encoding="utf-8") as f:
         f.write("# Reddit Deep Learning Digest\n")
