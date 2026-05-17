@@ -302,7 +302,7 @@ def check_and_run_onboarding():
     if onboarding.is_first_time():
         return onboarding.run()
 
-    return True  # Already set up
+    return False  # {True} kept false until we implement prioritization system
 
 
 def force_run_setup():
