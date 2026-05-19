@@ -2,8 +2,10 @@ import sys
 
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
-    QTextEdit, QMessageBox
+    QMessageBox
 from src.gui.popup_windows import TasksWindow
+from src.gui.chat_panel import ChatPanel
+from src.gui.theme import SOLO_LEVELING_QSS
 from src.utils.autostart import AutostartManager
 from core.calendar import sync_calendar_events , sync_google_tasks
 
@@ -39,15 +41,11 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(google_button)
         left_layout.addWidget(self.check_box)
 
-        # right box
-        self.summary_display = QTextEdit()
-        self.summary_display.setReadOnly(True)
-        self.summary_display.setPlaceholderText(
-            "Show user summaries of content which the agent scrapes from different sources..."
-        )
+        # right box — chatbot panel (system / friend modes)
+        self.chat_panel = ChatPanel(self)
 
         layout.addWidget(left_widget,stretch=1)
-        layout.addWidget(self.summary_display,stretch=3)
+        layout.addWidget(self.chat_panel,stretch=3)
 
     def open_tasks_window(self):
         if self.tasks_window is None:
@@ -76,6 +74,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(SOLO_LEVELING_QSS)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
