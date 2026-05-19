@@ -3,7 +3,7 @@ import os
 
 
 def run_build():
-    entry_point = os.path.join("src", "cli", "main.py")
+    entry_point = os.path.join("src", "gui", "main.py")
 
     PyInstaller.__main__.run(
         [
