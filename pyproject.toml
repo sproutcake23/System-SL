@@ -19,13 +19,16 @@ dependencies = [
 ]
 
 [project.scripts]
-system-sl = "cli.main:main"
+# CHANGE 1: Route through your new system_sl parent package namespace
+system-sl = "system_sl.cli.my_main:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# CHANGE 2: Restrict package searching strictly to your new namespace folder
+include = ["system_sl*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.css", "*.mp3"]

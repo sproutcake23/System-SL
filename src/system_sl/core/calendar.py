@@ -1,10 +1,12 @@
-import os.path
-import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from core.tasks import add_tasks, get_tasks_file_path
+
+import os.path
+import datetime
+
+from system_sl.core.tasks import add_tasks, get_tasks_file_path
 
 
 SCOPES = [

@@ -6,8 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QFrame,
 )
-from PySide6.QtCore import Qt, QTimer
-from core.tasks import get_random_task
+from PySide6.QtCore import Qt
 
 
 class SystemNotification(QWidget):
@@ -24,10 +23,6 @@ class SystemNotification(QWidget):
 
         self._setup_ui()
         self._apply_styles()
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.refresh_task)
-        self.timer.start(3600000)
 
     def _setup_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -74,13 +69,10 @@ class SystemNotification(QWidget):
 
         self.main_layout.addWidget(self.container)
 
-    def refresh_task(self):
-        task_info = get_random_task()
-        if task_info:
-            category, title = task_info
-            self.cat_label.setText(f"[ {category.upper()} ]")
-            self.msg_label.setText(title)
-            self.show_system_style()
+    def display_message(self, category: str, message: str) -> None:
+        self.cat_label.setText(f"[ {category.upper()} ]")
+        self.msg_label.setText(title)
+        self.show_system_style()
 
     def show_system_style(self):
         self.show()

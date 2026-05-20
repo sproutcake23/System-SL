@@ -3,7 +3,9 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent.parent))
+
 def migrate_credentials():
     """
     Scans for credentials.json in common locations (Installer folder & Downloads)
@@ -20,7 +22,7 @@ def migrate_credentials():
     
     # 2. Define Destination
     try:
-        from core.tasks import get_tasks_file_path
+        from system_sl.core.tasks import get_tasks_file_path
         target_path = Path(get_tasks_file_path("credentials.json"))
     except ImportError:
         print("⚠️  Warning: Could not import core.tasks. Migration skipped.")

@@ -1,18 +1,23 @@
 import sys
 import os
+
 from PySide6.QtWidgets import QApplication
-from utils.notifications import SystemNotification
-from utils.autostart import AutostartManager
-from core.tasks import (
+
+from system_sl.utils import SystemNotification
+from system_sl.services import BackgroundServiceController
+from system_sl.utils import AutostartManager
+
+# from system_sl.core.calendar import sync_calendar_events , sync_google_tasks
+from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
+from system_sl.core import (
     load_tasks,
     add_tasks,
     remove_tasks,
     get_random_task,
     mark_task_completed,
 )
-from core.calendar import sync_calendar_events , sync_google_tasks
-from core.user_info import user_goal_check, user_edit_goal
-from core.onboarding import check_and_run_onboarding, force_run_setup
+from system_sl.core import user_goal_check, user_edit_goal
+from system_sl.core import check_and_run_onboarding, force_run_setup
 
 
 def print_menu(autostart_status):
@@ -102,8 +107,9 @@ def inp():
 def main():
     if "--bg" in sys.argv:
         app = QApplication(sys.argv)
-        notif = SystemNotification()
-        notif.refresh_task()
+        window_view = SystemNotification()
+        service_controller = BackgroundServiceController(window_view)
+        service_controller.poll_and_render_task()
         sys.exit(app.exec())
 
     # ═══════════════════════════════════════════════════════════════
@@ -122,8 +128,9 @@ def main():
     manager = AutostartManager()
 
     try:
-        sync_calendar_events()
-        sync_google_tasks()
+        engine = GoogleSyncEngine()
+        engine.execute_sync(CalendarProvider(engine.client))
+        engine.execute_sync(TasksProvider(engine.client))
         user_goal_check()
     except Exception as e:
         print(f"Problem occurred while trying to connect : {e}")
