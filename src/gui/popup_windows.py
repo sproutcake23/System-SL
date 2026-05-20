@@ -1,5 +1,6 @@
-from PySide6.QtCore import QDate, QSize, Qt
+from PySide6.QtCore import QDate, QSize, Qt, Signal
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QDateEdit,
     QHBoxLayout,
@@ -14,10 +15,46 @@ from PySide6.QtWidgets import (
 
 from src.core.tasks import (
     add_tasks,
-    load_tasks,
     mark_task_completed,
     remove_tasks,
 )
+from src.core.prioritization import prioritize_tasks, record_reorder_feedback
+
+
+# GUI-added tasks no longer carry a user-chosen category — the model assigns one
+# later. Until then they land in this default bucket.
+DEFAULT_CATEGORY = "general"
+
+
+class ReorderableTaskList(QListWidget):
+    """Task list the user can drag to re-rank.
+
+    Emits ``reordered(moved_text, old_rank, new_rank, new_texts)`` after a drag,
+    where the ranks are 1-based positions and ``new_texts`` is the full new
+    order of the item labels.
+    """
+
+    reordered = Signal(str, int, int, list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setDragDropMode(QAbstractItemView.InternalMove)
+
+    def dropEvent(self, event):
+        moved_item = self.currentItem()
+        if moved_item is None:
+            super().dropEvent(event)
+            return
+        moved_text = moved_item.text()
+        old_texts = [self.item(i).text() for i in range(self.count())]
+        super().dropEvent(event)
+        new_texts = [self.item(i).text() for i in range(self.count())]
+        if moved_text not in old_texts or moved_text not in new_texts:
+            return
+        old_rank = old_texts.index(moved_text) + 1
+        new_rank = new_texts.index(moved_text) + 1
+        if old_rank != new_rank:
+            self.reordered.emit(moved_text, old_rank, new_rank, new_texts)
 
 
 class TasksWindow(QWidget):
@@ -26,10 +63,16 @@ class TasksWindow(QWidget):
         self.setWindowTitle("Tasks")
         self.setMinimumSize(QSize(800, 400))
 
+        # Current display order (prioritized task dicts) and a lookup from each
+        # item's label back to its task dict, kept in sync by _render().
+        self._order = []
+        self._text_to_task = {}
+
         root = QVBoxLayout(self)
         root.addWidget(QLabel("Here are your tasks!!"))
 
-        self.tasks_list_widget = QListWidget()
+        self.tasks_list_widget = ReorderableTaskList()
+        self.tasks_list_widget.reordered.connect(self._on_reordered)
         root.addWidget(self.tasks_list_widget, stretch=1)
 
         action_row = QHBoxLayout()
@@ -45,8 +88,6 @@ class TasksWindow(QWidget):
         root.addWidget(QLabel("Add task"))
 
         add_row = QHBoxLayout()
-        self.category_input = QLineEdit()
-        self.category_input.setPlaceholderText("Category")
         self.title_input = QLineEdit()
         self.title_input.setPlaceholderText("Title")
 
@@ -61,7 +102,6 @@ class TasksWindow(QWidget):
 
         self.add_button = QPushButton("Add")
         self.add_button.clicked.connect(self._on_add)
-        add_row.addWidget(self.category_input)
         add_row.addWidget(self.title_input)
         add_row.addWidget(self.deadline_checkbox)
         add_row.addWidget(self.deadline_edit)
@@ -80,17 +120,48 @@ class TasksWindow(QWidget):
         self._refresh_list()
 
     def _refresh_list(self):
+        # Re-rank from scratch via the prioritization engine, then render.
+        self._order = prioritize_tasks()
+        self._render(self._order)
+
+    def _render(self, tasks):
+        """Render ``tasks`` (ordered list of dicts) as a numbered list."""
         self.tasks_list_widget.clear()
-        for category, task_list in load_tasks().items():
-            for task in task_list:
-                title = task.get("title", "")
-                deadline = task.get("deadline")
-                display = f"{category}: {title}"
-                if deadline:
-                    display += f"  → due {deadline}"
-                item = QListWidgetItem(display)
-                item.setData(Qt.UserRole, (category, title))
-                self.tasks_list_widget.addItem(item)
+        self._text_to_task = {}
+        for rank, task in enumerate(tasks, start=1):
+            task["rank"] = rank
+            title = task.get("title", "")
+            deadline = task.get("deadline")
+            display = f"{rank}. {title}"
+            if deadline:
+                display += f"  → due {deadline}"
+            item = QListWidgetItem(display)
+            # Keep (category, title) so complete/remove still address the right
+            # task even though the category is no longer shown.
+            item.setData(Qt.UserRole, (task.get("category", ""), title))
+            self.tasks_list_widget.addItem(item)
+            self._text_to_task[display] = task
+
+    def _on_reordered(self, moved_text, old_rank, new_rank, new_texts):
+        # A manual drag changes display order only — it does NOT re-run the
+        # prioritization sort. Capture the feedback, then re-render in the
+        # user's chosen order (renumbering + refreshing item data).
+        new_order_dicts = [self._text_to_task[t] for t in new_texts if t in self._text_to_task]
+        moved = self._text_to_task.get(moved_text)
+        if moved is None or len(new_order_dicts) != len(new_texts):
+            self._render(self._order)
+            return
+
+        moved_title = moved.get("title", "")
+        new_order = [t.get("title", "") for t in new_order_dicts]
+        feedback = record_reorder_feedback(moved_title, old_rank, new_rank, new_order)
+
+        self._order = new_order_dicts
+        self._render(self._order)
+        self.status_label.setText(
+            f"Reordered '{feedback['moved_title']}': rank "
+            f"{feedback['old_rank']} → {feedback['new_rank']}"
+        )
 
     def _selected(self):
         item = self.tasks_list_widget.currentItem()
@@ -124,20 +195,19 @@ class TasksWindow(QWidget):
         self._refresh_list()
 
     def _on_add(self):
-        category = self.category_input.text().strip()
         title = self.title_input.text().strip()
         deadline = (
             self.deadline_edit.date().toString("yyyy-MM-dd")
             if self.deadline_checkbox.isChecked()
             else None
         )
-        if not category or not title:
-            self.status_label.setText("Category and title are required.")
+        if not title:
+            self.status_label.setText("Title is required.")
             return
         try:
-            add_tasks(category, title, deadline)
+            # Category is assigned by the model later; default for now.
+            add_tasks(DEFAULT_CATEGORY, title, deadline)
             self.status_label.setText(f"Added: {title}")
-            self.category_input.clear()
             self.title_input.clear()
             self.deadline_checkbox.setChecked(False)
             self.deadline_edit.setDate(QDate.currentDate())
