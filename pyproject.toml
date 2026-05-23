@@ -20,7 +20,7 @@ dependencies = [
 
 [project.scripts]
 # CHANGE 1: Route through your new system_sl parent package namespace
-system-sl = "system_sl.cli.my_main:main"
+system-sl = "system_sl.gui.main:main"
 
 [tool.setuptools]
 include-package-data = true

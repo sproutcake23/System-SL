@@ -1,8 +1,15 @@
 from typing import Any, Optional
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# LangChain / Google Imports
+from langchain.agents import create_agent
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 
 # Assuming these are imported from your core module as before
-from core.tasks import (
+from system_sl.core import (
     add_tasks,
     remove_tasks,
     mark_task_completed as core_mark_task_completed,
@@ -12,6 +19,8 @@ from core.tasks import (
     load_data,
     get_tasks_file_path,
 )
+
+from system_sl.my_chatbot import FRIEND_PROMPT, SYSTEM_MENTOR_PROMPT
 
 @tool
 def load_tasks() -> Any:
@@ -30,7 +39,7 @@ def load_tasks() -> Any:
              created_at timestamp, and an optional deadline.
     """
     # Placeholder for your core loading function
-    # return core_load_tasks()
+    return core_load_tasks()
     pass
 
 
@@ -49,7 +58,7 @@ def load_completed_tasks() -> Any:
     Returns:
         Any: A dictionary grouped by category containing strings like 'title (Completed: YYYY-MM-DD)'.
     """
-    # return core_load_completed_tasks()
+    return core_load_completed_tasks()
     pass
 
 
@@ -140,7 +149,7 @@ def get_random_task() -> Any:
     Returns:
         Any: A list matching [category, title] if a task is found, or null/None if no tasks exist.
     """
-    # return core_get_random_task()
+    return core_get_random_task()
     pass
 
 
@@ -182,3 +191,44 @@ def read_user_info() -> Any:
 
 # To hand these off to your LangChain Agent Executor later, you simply group them in a list:
 # tools = [load_tasks, load_completed_tasks, add_task, remove_task, mark_task_completed, get_random_task, read_persona, read_user_info]
+
+
+load_dotenv()
+
+
+
+
+
+# Use Gemini 1.5 Flash or Pro for best tool-calling reliability
+llm = ChatGoogleGenerativeAI(
+    model="models/gemma-4-31b-it", # Highly recommended over Gemma for tool-calling stability
+    google_api_key=os.getenv("GOOGLE_API_KEY"),
+    temperature=0
+)
+
+# Initialize Agent
+system_agent = create_agent(
+    model=llm,
+    tools = [load_tasks, load_completed_tasks, add_task, remove_task, mark_task_completed, get_random_task, read_persona, read_user_info],
+    system_prompt=SYSTEM_MENTOR_PROMPT,
+)
+
+adi_agent = create_agent(
+    model=llm,
+    tools = [load_tasks, load_completed_tasks, get_random_task, read_persona, read_user_info],
+    system_prompt=FRIEND_PROMPT,
+)
+
+from langsmith import uuid7
+
+config = { "configurable" : { "thread_id": str(uuid7()) } }
+
+
+
+
+# Flexible printing for different LangChain message formats
+# last_message = result["messages"][-1]
+# if hasattr(last_message, 'content'):
+#     print(last_message.content)
+# else:
+#     print(last_message)    

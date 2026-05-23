@@ -43,48 +43,8 @@ class ChatSession:
         return TOOL_SCHEMAS if self.mode == "system" else None
 
     def run_turn(self, user_msg: str) -> str:
-        self.history.append({"role": "user", "content": user_msg})
+        
+        
 
-        for _ in range(self.MAX_TOOL_ROUNDS):
-            kwargs: dict = {"model": self._model(), "messages": self.history}
-            tools = self._tools()
-            if tools:
-                kwargs["tools"] = tools
-
-            response = self.client.chat.completions.create(**kwargs)
-            message = response.choices[0].message
-            tool_calls = getattr(message, "tool_calls", None) or []
-
-            assistant_entry: dict = {"role": "assistant", "content": message.content}
-            if tool_calls:
-                assistant_entry["tool_calls"] = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments or "{}",
-                        },
-                    }
-                    for tc in tool_calls
-                ]
-            self.history.append(assistant_entry)
-
-            if not tool_calls:
-                return message.content or ""
-
-            for tc in tool_calls:
-                try:
-                    args = json.loads(tc.function.arguments or "{}")
-                except json.JSONDecodeError:
-                    args = {}
-                output = call_tool(tc.function.name, args)
-                self.history.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": output,
-                    }
-                )
-
+        
         return "[The System stalled — too many tool rounds without a final reply.]"
