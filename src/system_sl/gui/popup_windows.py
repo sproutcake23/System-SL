@@ -13,12 +13,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.system_sl.core.tasks import (
+from system_sl.core.my_tasks import (
     add_tasks,
     mark_task_completed,
     remove_tasks,
 )
-from src.system_sl.core.prioritization import prioritize_tasks, record_reorder_feedback
+from system_sl.core.prioritization import prioritize_tasks, record_reorder_feedback
 
 
 # GUI-added tasks no longer carry a user-chosen category — the model assigns one

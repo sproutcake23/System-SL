@@ -4,6 +4,8 @@ from system_sl.core.my_tasks import (
     add_tasks,
     remove_tasks,
     get_random_task,
+    load_completed_tasks,
+    save_completed_tasks,
     mark_task_completed,
 )
 from system_sl.core.my_onboarding import check_and_run_onboarding, force_run_setup
@@ -18,6 +20,8 @@ __all__ = [
     "load_tasks",
     "remove_tasks",
     "get_random_task",
+    "load_completed_tasks",
+    "save_completed_tasks",
     "mark_task_completed",
     "check_and_run_onboarding",
     "force_run_setup", 

@@ -16,6 +16,10 @@ from system_sl.core import (
     load_tasks as core_load_tasks,
     load_completed_tasks as core_load_completed_tasks,
     get_random_task as core_get_random_task,
+
+)
+
+from system_sl.utils import (
     load_data,
     get_tasks_file_path,
 )
@@ -219,9 +223,6 @@ adi_agent = create_agent(
     system_prompt=FRIEND_PROMPT,
 )
 
-from langsmith import uuid7
-
-config = { "configurable" : { "thread_id": str(uuid7()) } }
 
 
 

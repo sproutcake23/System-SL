@@ -16,6 +16,7 @@ dependencies = [
   "google-auth-httplib2",
   "google-auth-oauthlib",
   "pyinstaller>=6.20.0",
+  "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]

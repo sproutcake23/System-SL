@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from system_sl.chatbot.client import ChatSession
-from system_sl.chatbot.config import ChatConfigError
+from system_sl.my_chatbot import ChatSession, ChatConfigError
+
 
 
 # Solo Leveling colors used inline in the QTextEdit. Borders / backgrounds come
