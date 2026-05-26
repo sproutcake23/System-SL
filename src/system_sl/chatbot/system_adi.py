@@ -24,7 +24,7 @@ from system_sl.utils import (
     get_tasks_file_path,
 )
 
-from system_sl.my_chatbot import FRIEND_PROMPT, SYSTEM_MENTOR_PROMPT
+from system_sl.chatbot import FRIEND_PROMPT, SYSTEM_MENTOR_PROMPT
 
 @tool
 def load_tasks() -> Any:

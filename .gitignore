@@ -1,16 +1,41 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# SYSTEM-SL PROJECT GITIGNORE
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Environments & Dependencies
 .venv/
-.data/
+myenv/
+node_modules/
+
+# Python Build & Distribution Artifacts
 __pycache__/
-system_sl.egg-info/
-credentials.json
-token.json
-build/
-data/
-uv.lock
-.idea/
-/data
-*.spec
-uv.lock
-pyproject.toml
+*.pyc
+*.pyo
+*.pyd
 build/
 dist/
+system_sl.egg-info/
+*.spec
+
+# Local Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+credentials.json
+token.json
+
+# Persistent Application Data / Runtime Caches
+# (Keeps your user profiles, task logs, and vector caches out of Git)
+data/
+.data/
+vector_cache.json
+persona.json
+completed_tasks.json
+
+# IDE Configurations
+.idea/
+.vscode/
+*.swp
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DO NOT ADD 'pyproject.toml' OR 'uv.lock' BELOW THIS LINE
+# ══════════════════════════════════════════════════════════════════════════════

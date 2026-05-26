@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from system_sl.my_chatbot import ChatSession, ChatConfigError
+from system_sl.chatbot import ChatSession, ChatConfigError
 
 
 

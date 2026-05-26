@@ -5,59 +5,19 @@ from datetime import datetime
 import platform
 
 
-def get_tasks_file_path(filename):
-    prog_name = 'system-sl'
-
-    if os.name == 'nt':
-        base_dir = os.environ.get('APPDATA', os.path.expanduser("~\\AppData\\Roaming"))
-        config_dir = os.path.join(base_dir, prog_name)
-    else:
-        config_dir = os.path.join(os.path.expanduser("~"),".config",prog_name)
-
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-
-    return os.path.join(config_dir, filename)
+from system_sl.utils import get_tasks_file_path
+from system_sl.utils import load_data, save_data
 
 
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
 COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
-
-def load_data(filepath):
-    if not os.path.exists(filepath):
-        print(f"File {os.path.basename(filepath)} not found. Creating it.")
-        try:
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write("{}")
-            return {}
-        except Exception as e:
-            print(f"Could not create file {filepath}: {e}")
-            return {}
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = f.read().strip()
-
-            if not data:
-                return {}
-
-            return json.loads(data)
-    except Exception as e:
-        print(f"Error loading data {e}")
-        return {}
-
-
-def save_data(filepath, tasks: dict):
-    try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(tasks, f, indent=4)
-    except Exception as e:
-        print(f"Could not save data to the file {filepath}: {e}")
-
-
 def load_tasks():
+    """Fetches active tasks from storage and automatically processes system migrations for legacy string formats.
+
+    Returns:
+        dict: A dictionary of categorized task objects containing title, created_at, and deadline fields.
+    """
     data = load_data(TASKS_FILE_PATH)
 
     migrated = False
@@ -84,10 +44,28 @@ def load_tasks():
 
 
 def save_tasks(tasks: dict):
+    """Persists active tasks directly to the main tracking database file.
+
+    Args:
+        tasks (dict): Categorized active dictionary data structure to write.
+
+    Returns:
+        None
+    """
     save_data(TASKS_FILE_PATH, tasks)
 
 
 def add_tasks(task_type: str, task_title: str, deadline: str = None):
+    """Registers a new task inside a specific category pool while enforcing validation rules and avoiding duplicates.
+
+    Args:
+        task_type (str): The bucket name representing the task category.
+        task_title (str): Summary description of the item to add.
+        deadline (str, optional): Targeted deadline timestamp. Defaults to None.
+
+    Returns:
+        str: The sanitized task title string that was successfully saved.
+    """
     if not isinstance(task_type, str) or not task_type.strip():
         raise ValueError("Task type must be a non-empty string")
 
@@ -124,6 +102,15 @@ def add_tasks(task_type: str, task_title: str, deadline: str = None):
 
 
 def remove_tasks(task_type: str, task_title: str):
+    """Evicts a target task from active tracking files, popping the category if left empty.
+
+    Args:
+        task_type (str): The category container where the task resides.
+        task_title (str): The exact text name of the task item to clean up.
+
+    Returns:
+        str: The title string of the successfully removed task.
+    """
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
@@ -149,6 +136,11 @@ def remove_tasks(task_type: str, task_title: str):
 
 
 def get_random_task():
+    """Picks an outstanding item completely at random across all non-empty active categories.
+
+    Returns:
+        tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
+    """
     tasks = load_tasks()
     non_empty_cat = {k: v for k, v in tasks.items() if v}
     if not non_empty_cat:
@@ -160,26 +152,53 @@ def get_random_task():
 
 
 def load_completed_tasks():
+    """Fetches the complete historical array of items archived as completed.
+
+    Returns:
+        dict: Parsed collection map containing log strings of finished events.
+    """
     return load_data(COMPLETED_TASKS_FILE_PATH)
 
 
 def save_completed_tasks(tasks: dict):
+    """Persists historical completion statistics changes directly onto file records.
+
+    Args:
+        tasks (dict): Updated logs structure tracking archived items.
+
+    Returns:
+        None
+    """
     save_data(COMPLETED_TASKS_FILE_PATH, tasks)
 
 
 def mark_task_completed(task_type: str, task_title: str):
+    """Extracts a task out of active runtime arrays and logs it as completed inside history archives.
+
+    Args:
+        task_type (str): Original classification bucket tracking the item.
+        task_title (str): Unique text identity of the task being checked off.
+
+    Returns:
+        str: The title of the validated task moved to historical logs.
+    """
     removed_title = remove_tasks(task_type, task_title)
 
     completed_tasks = load_completed_tasks()
     if task_type not in completed_tasks:
         completed_tasks[task_type] = []
 
-    completion_entry = (
-        f"{task_title} (Completed: {datetime.now().strftime('%Y-%m-%d')})"
-    )
+    completion_entry = {
+        "title": task_title,
+        "Completed": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
 
     if completion_entry not in completed_tasks[task_type]:
         completed_tasks[task_type].append(completion_entry)
 
     save_completed_tasks(completed_tasks)
     return removed_title
+
+if  __name__ == "__main__":
+    print(load_completed_tasks())
+    

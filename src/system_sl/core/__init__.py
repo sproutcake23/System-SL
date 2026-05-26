@@ -1,5 +1,5 @@
-from system_sl.core.my_sync_service import GoogleSyncEngine, CalendarProvider, TasksProvider
-from system_sl.core.my_tasks import (
+from system_sl.core.sync_service import GoogleSyncEngine, CalendarProvider, TasksProvider
+from system_sl.core.tasks import (
     load_tasks,
     add_tasks,
     remove_tasks,
@@ -8,8 +8,8 @@ from system_sl.core.my_tasks import (
     save_completed_tasks,
     mark_task_completed,
 )
-from system_sl.core.my_onboarding import check_and_run_onboarding, force_run_setup
-from system_sl.core.my_user_info import user_goal_check, user_edit_goal
+from system_sl.core.onboarding import check_and_run_onboarding, force_run_setup
+from system_sl.core.user_info import user_goal_check, user_edit_goal
 
 
 __all__ = [

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from system_sl.core.my_tasks import (
+from system_sl.core.tasks import (
     add_tasks,
     mark_task_completed,
     remove_tasks,

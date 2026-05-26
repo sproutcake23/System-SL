@@ -1,10 +1,20 @@
 import os
-from system_sl.core.tasks import load_data, save_data, get_tasks_file_path
+from system_sl.core.tasks import load_data, save_data
+from system_sl.utils import get_tasks_file_path
 
 USER_INFO_FILE_PATH = get_tasks_file_path("user_info.json")
 
 
 def user_goal_check(user_info_path=USER_INFO_FILE_PATH):
+    """Verifies if the user goal profile exists and contains keywords, prompting initialization if empty.
+
+    Args:
+        user_info_path (str, optional): The absolute file path to the user information storage file. 
+            Defaults to USER_INFO_FILE_PATH.
+
+    Returns:
+        list: A list of active goal keyword strings.
+    """
     user_goal_data = {"goal": []}
 
     if os.path.exists(user_info_path):
@@ -28,6 +38,15 @@ def user_goal_check(user_info_path=USER_INFO_FILE_PATH):
 
 
 def user_edit_goal(user_info_path=USER_INFO_FILE_PATH):
+    """Provides an interactive command-line interface sub-menu to append or remove keywords from user goals.
+
+    Args:
+        user_info_path (str, optional): The absolute file path to the user information storage file. 
+            Defaults to USER_INFO_FILE_PATH.
+
+    Returns:
+        None
+    """
     user_goal_data = user_goal_check(user_info_path)
     print(f"Your current goal information is : {user_goal_data}")
     while True:

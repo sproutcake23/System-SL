@@ -4,7 +4,7 @@ import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from system_sl.core.my_tasks import add_tasks
+from system_sl.core.tasks import add_tasks
 from system_sl.utils import GoogleAPIClient
 
 SCOPES: List[str] = [

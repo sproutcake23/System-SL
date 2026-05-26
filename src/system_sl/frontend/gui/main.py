@@ -3,9 +3,9 @@ import sys
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
     QMessageBox
-from system_sl.gui.popup_windows import TasksWindow
-from system_sl.gui.chat_panel import ChatPanel
-from system_sl.gui.theme import SOLO_LEVELING_QSS
+from system_sl.frontend.gui.popup_windows import TasksWindow
+from system_sl.frontend.gui.chat_panel import ChatPanel
+from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
 from system_sl.utils import AutostartManager
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 

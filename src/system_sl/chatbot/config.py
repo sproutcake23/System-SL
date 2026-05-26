@@ -2,7 +2,7 @@ import json
 import os
 from dataclasses import dataclass
 
-from core.tasks import get_tasks_file_path
+from system_sl.utils import get_tasks_file_path
 
 
 CONFIG_FILENAME = "llm_config.json"
