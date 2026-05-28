@@ -16,16 +16,20 @@ dependencies = [
   "google-auth-httplib2",
   "google-auth-oauthlib",
   "pyinstaller>=6.20.0",
+  "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
-system-sl = "cli.main:main"
+# CHANGE 1: Route through your new system_sl parent package namespace
+system-sl = "system_sl.frontend.gui.main:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# CHANGE 2: Restrict package searching strictly to your new namespace folder
+include = ["system_sl*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.css", "*.mp3"]
