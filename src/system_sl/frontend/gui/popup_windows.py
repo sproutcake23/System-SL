@@ -18,7 +18,11 @@ from system_sl.core.tasks import (
     mark_task_completed,
     remove_tasks,
 )
-from system_sl.core.prioritization import prioritize_tasks, record_reorder_feedback
+from system_sl.core.prioritization import (
+    prioritize_tasks,
+    record_reorder_feedback,
+    save_manual_order,
+)
 
 
 # GUI-added tasks no longer carry a user-chosen category — the model assigns one
@@ -157,6 +161,8 @@ class TasksWindow(QWidget):
         feedback = record_reorder_feedback(moved_title, old_rank, new_rank, new_order)
 
         self._order = new_order_dicts
+        # Persist the new order so it survives closing/reopening the window.
+        save_manual_order(self._order)
         self._render(self._order)
         self.status_label.setText(
             f"Reordered '{feedback['moved_title']}': rank "

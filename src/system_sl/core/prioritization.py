@@ -8,6 +8,7 @@ re-ranking (see ``priori.jpeg``).
 from datetime import datetime
 
 from system_sl.core.tasks import load_tasks, get_tasks_file_path, load_data
+from system_sl.utils import save_data
 
 
 # Scoring weights. Tunable — these only affect the *initial* ordering the user
@@ -16,6 +17,9 @@ OVERDUE_SCORE = 100.0   # past-due tasks float to the very top
 SOON_BASE = 50.0        # a task due today scores this; further out scores less
 SOON_HORIZON = 50       # days beyond which "soon" no longer adds urgency
 KEYWORD_BOOST = 10.0    # title matches a persona/goal keyword
+
+# File holding the user's manual drag-reordering, so it survives restarts.
+ORDER_FILE = "task_order.json"
 
 
 def _parse_deadline(value):
@@ -104,10 +108,42 @@ def prioritize_tasks(tasks=None):
     # Highest score first; older tasks then alphabetical for stable ties.
     scored.sort(key=lambda t: (-t["score"], t["created_at"], t["title"]))
 
+    # Apply any saved manual ordering. Tasks the user has dragged keep their
+    # chosen positions; anything not in the saved order (e.g. newly added or
+    # synced tasks) follows after, still in score order. Both sorts are stable,
+    # so the score order is preserved among the trailing tasks.
+    manual = load_manual_order()
+    if manual:
+        pos = {(cat, title): i for i, (cat, title) in enumerate(manual)}
+        scored.sort(
+            key=lambda t: pos.get((t["category"], t["title"]), len(pos))
+        )
+
     for rank, task in enumerate(scored, start=1):
         task["rank"] = rank
 
     return scored
+
+
+def load_manual_order():
+    """Return the saved manual order as a list of ``[category, title]`` pairs.
+
+    Empty list if the user has never reordered (or the file is missing/empty).
+    """
+    data = load_data(get_tasks_file_path(ORDER_FILE))
+    if not isinstance(data, dict):
+        return []
+    return data.get("order", [])
+
+
+def save_manual_order(tasks):
+    """Persist the current display order so a manual drag survives restarts.
+
+    ``tasks`` is the ordered list of task dicts currently shown; only each
+    task's ``(category, title)`` identity is stored.
+    """
+    order = [[t.get("category", ""), t.get("title", "")] for t in tasks]
+    save_data(get_tasks_file_path(ORDER_FILE), {"order": order})
 
 
 def record_reorder_feedback(moved_title, old_rank, new_rank, new_order):
