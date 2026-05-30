@@ -6,7 +6,6 @@
 .venv/
 myenv/
 node_modules/
-
 # Python Build & Distribution Artifacts
 __pycache__/
 *.pyc
