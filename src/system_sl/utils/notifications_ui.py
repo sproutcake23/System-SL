@@ -71,7 +71,7 @@ class SystemNotification(QWidget):
 
     def display_message(self, category: str, message: str) -> None:
         self.cat_label.setText(f"[ {category.upper()} ]")
-        self.msg_label.setText(title)
+        self.msg_label.setText(message)
         self.show_system_style()
 
     def show_system_style(self):

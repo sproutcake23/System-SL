@@ -6,8 +6,9 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, Q
 from system_sl.frontend.gui.popup_windows import TasksWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
-from system_sl.utils import AutostartManager
+from system_sl.utils import AutostartManager, SystemNotification
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
+from system_sl.services import BackgroundServiceController
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -77,6 +78,17 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+
+    # Background notifier mode: the autostart systemd unit launches the app with
+    # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
+    # menu. Opening the menu here would make the always-restarting service
+    # reopen it every time it was closed.
+    if "--bg" in sys.argv:
+        view = SystemNotification()
+        controller = BackgroundServiceController(view)
+        controller.poll_and_render_task()
+        sys.exit(app.exec())
+
     app.setStyleSheet(SOLO_LEVELING_QSS)
     window = MainWindow()
     window.show()
