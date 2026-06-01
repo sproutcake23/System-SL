@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 from PySide6.QtCore import Qt
+from system_sl.utils.audio_manager import play_sound, get_current_sound
 
 
 class SystemNotification(QWidget):
@@ -72,6 +73,8 @@ class SystemNotification(QWidget):
     def display_message(self, category: str, message: str) -> None:
         self.cat_label.setText(f"[ {category.upper()} ]")
         self.msg_label.setText(message)
+        current_sound = get_current_sound()
+        play_sound(current_sound)
         self.show_system_style()
 
     def show_system_style(self):
