@@ -1,6 +1,6 @@
 import sys
 import os
-
+import glob
 from PySide6.QtWidgets import QApplication
 
 from system_sl.utils import SystemNotification
@@ -18,7 +18,10 @@ from system_sl.core import (
 )
 from system_sl.core import user_goal_check, user_edit_goal
 from system_sl.core import check_and_run_onboarding, force_run_setup
-
+from system_sl.utils.audio_manager import (
+    DEFAULT_SOUNDS_DIR, get_current_sound, play_sound, 
+    check_audio_duration, set_sound_setting
+)
 
 def print_menu(autostart_status):
     print(f"\n{'-' * 5}Manage your tasks{'-' * 5}")
@@ -30,6 +33,7 @@ def print_menu(autostart_status):
     print("(c)Task Completed")
     print("(g)Sync Google Calendar & Event")
     print(f"(as)Toggle Autostart [Current status: {autostart_status}]")
+    print("(ns)To open notification sound menu")
     print("(q)Exit")
     print("-" * 27)
 
@@ -103,8 +107,71 @@ def inp():
     task_title = input("Enter your task title :")
     return task_type, task_title
 
+def notification_sound_menu():
+    while True:
+        print(f"\n{'-' * 10} Notification Sound Menu {'-' * 10}")
+        print(f"Current Sound: {os.path.basename(get_current_sound())}\n")
+        
+        # Load available default sounds
+        if not os.path.exists(DEFAULT_SOUNDS_DIR):
+            os.makedirs(DEFAULT_SOUNDS_DIR, exist_ok=True)
+            
+        audio_files = []
+        for ext in ("*.wav", "*.mp3"):
+            audio_files.extend(glob.glob(os.path.join(DEFAULT_SOUNDS_DIR, ext)))
+            
+        print("Available Pre-defined Sounds:")
+        for idx, file_path in enumerate(audio_files, start=1):
+            print(f"  [{idx}] {os.path.basename(file_path)}")
+        
+        print(f"  [{len(audio_files) + 1}] Add custom sound path...")
+        print("\nCommands: <number> to PREVIEW | 'set <number>' to APPLY | 'q' to go BACK")
+        
+        choice = input("Enter command: ").strip().lower()
+        
+        if choice == 'q':
+            break
+            
+        # Handle "set X" command
+        if choice.startswith("set "):
+            idx_str = choice.split(" ")[1]
+            if idx_str.isdigit():
+                idx = int(idx_str)
+                if 1 <= idx <= len(audio_files):
+                    set_sound_setting(audio_files[idx-1])
+                    print(f"✅ Sound updated to {os.path.basename(audio_files[idx-1])}")
+                    continue
+        
+        # Handle "X" to preview or custom path
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(audio_files):
+                print(f"🔊 Playing {os.path.basename(audio_files[idx-1])}...")
+                play_sound(audio_files[idx-1])
+            elif idx == len(audio_files) + 1:
+                custom_path = input("Enter absolute path to your .wav/.mp3 file: ").strip().strip("'\"")
+                if os.path.exists(custom_path) and custom_path.lower().endswith(('.wav', '.mp3')):
+                    print("Checking duration...")
+                    duration_ms = check_audio_duration(custom_path)
+                    
+                    if duration_ms > 3000:
+                        print(f"❌ REJECTED: Audio is too long ({duration_ms/1000:.1f} sec). Must be <= 3.0 seconds.")
+                    elif duration_ms <= 0:
+                        print("❌ Error reading audio file or file is corrupted.")
+                    else:
+                        print(f"🔊 Previewing custom sound ({duration_ms/1000:.1f} sec)...")
+                        play_sound(custom_path)
+                        confirm = input("Do you want to set this as your notification sound? (y/n): ").strip().lower()
+                        if confirm == 'y':
+                            set_sound_setting(custom_path)
+                            print("✅ Custom sound applied!")
+                else:
+                    print("❌ Invalid file path or format.")
+            else:
+                print("Invalid number.")
 
 def main():
+    app = QApplication.instance() or QApplication(sys.argv)
     if "--bg" in sys.argv:
         app = QApplication(sys.argv)
         window_view = SystemNotification()
@@ -186,7 +253,9 @@ def main():
                 force_run_setup()
             except Exception as e:
                 print(f"ERROR editing profile : {e}")
-        
+        elif choice == "ns":
+            notification_sound_menu()
+            
         elif choice == "q":
             sys.exit(0)
         else:
