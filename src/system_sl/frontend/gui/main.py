@@ -1,11 +1,12 @@
 import sys
-
-from PySide6.QtCore import QSize
+import os
+from PySide6.QtCore import QSize, QFileSystemWatcher
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
     QMessageBox
 from system_sl.frontend.gui.popup_windows import TasksWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
-from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
+from system_sl.frontend.gui.theme import generate_main_qss
+from system_sl.utils.theme_manager import get_system_colors, THEME_FILE_PATH
 from system_sl.utils import AutostartManager, SystemNotification
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 from system_sl.services import BackgroundServiceController
@@ -47,6 +48,20 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(left_widget,stretch=1)
         layout.addWidget(self.chat_panel,stretch=3)
+        
+        # --- LIVE THEME WATCHER ---
+        self.theme_watcher = QFileSystemWatcher()
+        if os.path.exists(THEME_FILE_PATH):
+            self.theme_watcher.addPath(THEME_FILE_PATH)
+            
+        self.theme_watcher.fileChanged.connect(self.reload_theme)
+
+    # ---> THIS WAS THE MISSING FUNCTION <---
+    def reload_theme(self):
+        """Triggers instantly when the TOML file is modified."""
+        colors = get_system_colors()
+        new_qss = generate_main_qss(colors)
+        QApplication.instance().setStyleSheet(new_qss)
 
     def open_tasks_window(self):
         if self.tasks_window is None:
@@ -85,11 +100,15 @@ def main():
     # reopen it every time it was closed.
     if "--bg" in sys.argv:
         view = SystemNotification()
+        colors = get_system_colors()
+        view._apply_styles(colors)
+        
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
         sys.exit(app.exec())
-
-    app.setStyleSheet(SOLO_LEVELING_QSS)
+        
+    colors = get_system_colors()
+    app.setStyleSheet(generate_main_qss(colors))
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

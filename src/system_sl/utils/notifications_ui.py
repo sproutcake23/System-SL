@@ -23,7 +23,7 @@ class SystemNotification(QWidget):
         self.setFixedSize(800, 500)
 
         self._setup_ui()
-        self._apply_styles()
+        # DELETED: self._apply_styles() is removed from here
 
     def _setup_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -85,30 +85,50 @@ class SystemNotification(QWidget):
     def keyPressEvent(self, event):
         self.hide()
 
-    def _apply_styles(self):
-        self.setStyleSheet("""
-            QWidget {
+    def _apply_styles(self, colors: dict):
+        # Using f-strings to inject the dynamic theme variables
+        self.setStyleSheet(f"""
+            QWidget {{
                 background: transparent;
                 font-family: 'Montserrat', sans-serif;
-            }
-            #systemWindow {
-                background-color: rgba(5, 10, 20, 240);
-                border: 1px solid rgba(0, 210, 255, 0.5);
+            }}
+            #systemWindow {{
+                background-color: {colors.get('bg', 'rgba(5, 10, 20, 240)')};
+                border: 1px solid {colors.get('accent_border', '#00d2ff')};
                 border-radius: 2px;
-            }
-            #header {
-                border: 1px solid #00d2ff;
+            }}
+            #header {{
+                border: 1px solid {colors.get('accent_border', '#00d2ff')};
                 margin: 40px 100px 0px 100px;
                 max-height: 50px;
-            }
-            #headerText { color: white; font-size: 20px; letter-spacing: 4px; }
-            #notifCategory { color: #00d2ff; font-weight: 700; font-size: 18px; }
-            #notifMessage { font-size: 22px; color: #e0e0e0; }
-            QPushButton {
-                border: 1px solid #00d2ff;
-                color: #00d2ff;
+            }}
+            #headerText {{ 
+                color: {colors.get('text_light', 'white')}; 
+                font-size: 20px; 
+                letter-spacing: 4px; 
+            }}
+            #notifCategory {{ 
+                color: {colors.get('accent', '#00d2ff')}; 
+                font-weight: 700; 
+                font-size: 18px; 
+            }}
+            #notifMessage {{ 
+                font-size: 22px; 
+                color: {colors.get('text', '#e0e0e0')}; 
+            }}
+            QPushButton {{
+                border: 1px solid {colors.get('accent_border', '#00d2ff')};
+                color: {colors.get('accent_light', '#00d2ff')};
+                background-color: {colors.get('accent_dim_08', 'transparent')};
                 padding: 8px 35px;
                 font-weight: 700;
-            }
-            QPushButton:hover { background: rgba(0, 210, 255, 0.2); color: white; }
+            }}
+            QPushButton:hover {{ 
+                background-color: {colors.get('accent_dim_18', 'rgba(0, 210, 255, 0.2)')}; 
+                color: white; 
+                border: 1px solid {colors.get('accent', '#00d2ff')};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors.get('accent_dim_30', 'rgba(0, 210, 255, 0.3)')};
+            }}
         """)
