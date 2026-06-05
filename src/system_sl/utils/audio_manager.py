@@ -17,9 +17,8 @@ qInstallMessageHandler(_silent_qt_message_handler)
 
 
 SETTINGS_FILE = get_tasks_file_path("settings.json")
-DEFAULT_SOUNDS_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "sounds")
-)
+DEFAULT_SOUNDS_DIR = get_tasks_file_path("sounds")
+os.makedirs(DEFAULT_SOUNDS_DIR, exist_ok=True)
 FALLBACK_SOUND = os.path.join(DEFAULT_SOUNDS_DIR, "default.wav")
 
 _player = None

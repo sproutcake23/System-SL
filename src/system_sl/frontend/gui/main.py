@@ -2,13 +2,15 @@ import sys
 
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
-    QMessageBox
+    QMessageBox,QFileDialog
 from system_sl.frontend.gui.popup_windows import TasksWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
 from system_sl.utils import AutostartManager, SystemNotification
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 from system_sl.services import BackgroundServiceController
+from system_sl.utils.audio_manager import play_sound, set_sound_setting, DEFAULT_SOUNDS_DIR
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -33,6 +35,9 @@ class MainWindow(QMainWindow):
         google_button = QPushButton("Google")
         google_button.clicked.connect(self.sync_calendar)
 
+        sound_button = QPushButton("Set Notification Sound")
+        sound_button.clicked.connect(self.change_notification_sound)
+
         self.check_box = QCheckBox("Notification AutoStart")
         initial_state = self.autostart.is_enabled()
         self.check_box.setChecked(initial_state)
@@ -40,6 +45,7 @@ class MainWindow(QMainWindow):
 
         left_layout.addWidget(task_button)
         left_layout.addWidget(google_button)
+        left_layout.addWidget(sound_button)
         left_layout.addWidget(self.check_box)
 
         # right box — chatbot panel (system / friend modes)
@@ -64,7 +70,7 @@ class MainWindow(QMainWindow):
         message_box.exec()
 
     def sync_calendar(self):
-        message_box = QMessageBox()
+        message_box = QMessageBox(self)
         try:
             engine = GoogleSyncEngine()
             engine.execute_sync(CalendarProvider(engine.client))
@@ -75,6 +81,22 @@ class MainWindow(QMainWindow):
             message_box.setWindowTitle("Error")
             message_box.setText(str(e))
             message_box.exec()
+
+    def change_notification_sound(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Notification Sound",
+            DEFAULT_SOUNDS_DIR,
+            "Audio Files (*.wav *.mp3)"
+        )
+        if file_path:
+            try:
+                set_sound_setting(file_path)
+                play_sound(file_path)
+                QMessageBox.information(self, "Success", "Notification sound updated!")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to set sound:\n{str(e)}")
+
 
 def main():
     app = QApplication(sys.argv)
