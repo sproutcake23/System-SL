@@ -196,11 +196,8 @@ def read_user_info() -> Any:
 # To hand these off to your LangChain Agent Executor later, you simply group them in a list:
 # tools = [load_tasks, load_completed_tasks, add_task, remove_task, mark_task_completed, get_random_task, read_persona, read_user_info]
 
-
-load_dotenv()
-
-
-
+env_path = Path.home() / ".config" / "system-sl" / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 # Use Gemini 1.5 Flash or Pro for best tool-calling reliability

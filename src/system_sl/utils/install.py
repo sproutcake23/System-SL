@@ -1,10 +1,11 @@
 import os
+import subprocess
 import sys
 import shutil
-import subprocess
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
+
 
 def migrate_credentials():
     """
@@ -14,15 +15,16 @@ def migrate_credentials():
     # 1. Define Potential Sources
     script_dir = Path(__file__).parent.absolute()
     downloads_dir = Path.home() / "Downloads"
-    
+
     potential_sources = [
-        script_dir / "credentials.json",     # Current folder
-        downloads_dir / "credentials.json"   # System Downloads folder
+        script_dir / "credentials.json",  # Current folder
+        downloads_dir / "credentials.json",  # System Downloads folder
     ]
-    
+
     # 2. Define Destination
     try:
         from system_sl.core.tasks import get_tasks_file_path
+
         target_path = Path(get_tasks_file_path("credentials.json"))
     except ImportError:
         print("⚠️  Warning: Could not import core.tasks. Migration skipped.")
@@ -34,7 +36,7 @@ def migrate_credentials():
         if src.exists():
             found_source = src
             break
-            
+
     if found_source:
         print(f"Found Google credentials at: {found_source}")
         print(f"Migrating to: {target_path.parent}...")
@@ -45,15 +47,53 @@ def migrate_credentials():
         except Exception as e:
             print(f"❌ Error migrating credentials: {e}")
     else:
-        print("ℹ️  credentials.json not found in Downloads or current folder. Skipping migration.")
+        print(
+            "ℹ️  credentials.json not found in Downloads or current folder. Skipping migration."
+        )
+
+
+def install_sounds(source_sounds_dir: Path):
+    """
+    Takes the exact folder path where the sounds are currently located,
+    and copies them to the system config folder.
+    """
+    if not source_sounds_dir.exists():
+        print(f"ℹ️  No sounds found at {source_sounds_dir}. Skipping.")
+        return
+
+    # Try to use your existing path logic
+    try:
+        from system_sl.core.tasks import get_tasks_file_path
+
+        target_sounds_dir = Path(get_tasks_file_path("sounds"))
+    except ImportError:
+        # Failsafe just in case the import breaks during install
+        target_sounds_dir = Path.home() / ".config" / "system-sl" / "sounds"
+
+    print(f"🎵 Installing notification sounds to {target_sounds_dir}...")
+
+    try:
+        target_sounds_dir.mkdir(parents=True, exist_ok=True)
+        count = 0
+        for audio_file in source_sounds_dir.glob("*"):
+            if audio_file.is_file():
+                shutil.copy2(audio_file, target_sounds_dir)
+                count += 1
+        print(f"✅ {count} sound(s) installed successfully.")
+    except Exception as e:
+        print(f"❌ Error installing sounds: {e}")
+
 
 def install_the_system():
-    script_dir = Path(__file__).parent.absolute()
+    project_root = Path(__file__).parent.parent.parent.parent.absolute()
     binary_name = "system-sl" if os.name != "nt" else "system-sl.exe"
-    source_path = script_dir / binary_name
+
+    source_path = project_root / "dist" / binary_name
+    sounds_folder = project_root / "assets" / "sounds"
 
     if not source_path.exists():
-        print(f"❌ Error: {binary_name} not found in {script_dir}!")
+        print(f"❌ Error: {binary_name} not found in {source_path.parent}!")
+        print("Did you remember to run PyInstaller first?")
         return
 
     if os.name != "nt":
@@ -73,7 +113,8 @@ def install_the_system():
         os.chmod(target_path, 0o755)
 
     migrate_credentials()
-    
+    install_sounds(sounds_folder)
+
     print("⚔️  Forging the shortcut...")
 
     if os.name != "nt":
@@ -85,7 +126,7 @@ def install_the_system():
             "Name=THE SYSTEM",
             f"Exec={target_path}",
             f"Path={work_dir}",
-            "Terminal=true",
+            "Terminal=false",
             "Icon=utilities-terminal",
             "Categories=Utility;",
             "Comment=Arise, Player.",
