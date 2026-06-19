@@ -1,6 +1,7 @@
 """Module for handling cross-platform application data storage directories."""
 
 import os
+from pathlib import Path
 
 
 def get_tasks_file_path(filename: str) -> str:
@@ -14,13 +15,11 @@ def get_tasks_file_path(filename: str) -> str:
     """
     prog_name = 'system-sl'
 
-    if os.name == 'nt':
-        base_dir = os.environ.get('APPDATA', os.path.expanduser("~\\AppData\\Roaming"))
-        config_dir = os.path.join(base_dir, prog_name)
+    if os.name == "nt":
+        base_dir = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        config_dir = base_dir / prog_name
     else:
-        config_dir = os.path.join(os.path.expanduser("~"), ".config", prog_name)
+        config_dir = Path.home() / ".config" / prog_name
 
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-
-    return os.path.join(config_dir, filename)
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return str(config_dir / filename)
