@@ -1,7 +1,7 @@
 import json
 from typing import Literal, List, Union
 
-from system_sl.chatbot.system_adi import system_agent, adi_agent
+from system_sl.chatbot.system_adi import get_system_agent, get_adi_agent
 
 from langsmith import uuid7
 
@@ -35,8 +35,10 @@ class ChatSession:
             chosen_id = thread_id or str(uuid7())
             self.config = { "configurable": { "thread_id": chosen_id } }
         
-        # Select the pre-compiled agent
-        self.agent = system_agent if mode == "system" else adi_agent
+        # Select the pre-compiled agent. The factory builds the LLM/agent on
+        # first use (lazy init) — by the time a ChatSession is created the API
+        # key has already been secured in main().
+        self.agent = get_system_agent() if mode == "system" else get_adi_agent()
 
     def wrap_message(self, user_msg: Union[str, List[str]]) -> List[dict]:
 

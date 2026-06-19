@@ -1,12 +1,15 @@
+import os
 import sys
+from pathlib import Path
 
+from dotenv import load_dotenv,set_key
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
-    QMessageBox,QFileDialog
+    QMessageBox, QFileDialog, QInputDialog
 from system_sl.frontend.gui.popup_windows import TasksWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
-from system_sl.utils import AutostartManager, SystemNotification
+from system_sl.utils import AutostartManager, SystemNotification, get_tasks_file_path
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 from system_sl.services import BackgroundServiceController
 from system_sl.utils.audio_manager import play_sound, set_sound_setting, DEFAULT_SOUNDS_DIR
@@ -100,6 +103,7 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyleSheet(SOLO_LEVELING_QSS)
 
     # Background notifier mode: the autostart systemd unit launches the app with
     # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
@@ -111,7 +115,33 @@ def main():
         controller.poll_and_render_task()
         sys.exit(app.exec())
 
-    app.setStyleSheet(SOLO_LEVELING_QSS)
+    env_path = Path(get_tasks_file_path(".env"))
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+
+    api_key = os.getenv("GOOGLE_API_KEY")
+
+    if not api_key:
+        key, ok = QInputDialog.getText(
+            None,
+            "Missing API Key",
+            "Paste GOOGLE_API_KEY:",
+        )
+        if not ok or not key.strip():
+            QMessageBox.critical(
+                None,
+                "API Key Required",
+                "No GOOGLE_API_KEY was provided. The app cannot continue.",
+            )
+            sys.exit(1) # Safely exit the application instead of raising an unhandled RuntimeError
+        
+        api_key = key.strip()
+        os.environ["GOOGLE_API_KEY"] = api_key
+
+        env_path.touch(exist_ok=True)
+        set_key(str(env_path), "GOOGLE_API_KEY", api_key)
+
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
