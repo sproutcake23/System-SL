@@ -84,10 +84,10 @@ class Setup:
 
     # _nlp = None for lazy loading
 
-    def _get_model(self) -> Language:
+    def _get_model(self) -> Language
         """Return the global spacy model, loading it on first call."""
         if self._nlp is None:
-            self._model = self._load_spacy_model()
+            self._nlp = self._load_spacy_model()
         return self._nlp
 
 
@@ -321,7 +321,7 @@ class Decay_stradegy:
         )  # ALigned tasks = 10 , non-aligned tasks = 30
         x = STEEEPNESS * (decay_task_count - dynamic_midpoint)
         decay_w = MAX_DECAY / (
-            1 + math.exp(-1)
+            1 + math.exp(-x)
         )  # symoid type function for reaching the threashold
 
         return round(1.0 - decay_w, 4), round(
