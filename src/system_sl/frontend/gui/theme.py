@@ -42,6 +42,12 @@ QPushButton:pressed {
     border: 1px solid #67e8ff;
 }
 
+QPushButton:checked {
+    background-color: rgba(0, 217, 255, 0.30);
+    color: #b6f1ff;
+    border: 1px solid #00d9ff;
+}
+
 QPushButton:disabled {
     background-color: rgba(255, 255, 255, 0.02);
     color: #3d4d68;
@@ -115,6 +121,21 @@ QListWidget::item:selected {
     background-color: rgba(0, 217, 255, 0.18);
     color: #b6f1ff;
     border-left: 2px solid #00d9ff;
+}
+
+/* --- Progress bar --- */
+QProgressBar {
+    background-color: #0e1626;
+    border: 1px solid #1f6f99;
+    border-radius: 0px;
+    text-align: center;
+    color: #b3d4ff;
+    height: 22px;
+    font-size: 12px;
+}
+
+QProgressBar::chunk {
+    background-color: #00d9ff;
 }
 
 /* --- Combo box popup --- */

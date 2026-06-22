@@ -3,7 +3,8 @@ import sys
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
     QMessageBox,QFileDialog
-from system_sl.frontend.gui.popup_windows import TasksWindow
+from system_sl.frontend.gui.popup_windows import TasksWindow, OnboardingWindow
+from system_sl.core.onboarding import PersonaStorageHandler
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
 from system_sl.utils import AutostartManager, SystemNotification
@@ -112,8 +113,28 @@ def main():
         sys.exit(app.exec())
 
     app.setStyleSheet(SOLO_LEVELING_QSS)
-    window = MainWindow()
-    window.show()
+
+    try:
+        storage = PersonaStorageHandler()
+        if storage.is_first_time():
+            onboarding = OnboardingWindow()
+            main_window = None
+
+            def _on_onboarding_done(result):
+                nonlocal main_window
+                main_window = MainWindow()
+                main_window.show()
+
+            onboarding.onboarding_complete.connect(_on_onboarding_done)
+            onboarding.show()
+        else:
+            main_window = MainWindow()
+            main_window.show()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":
