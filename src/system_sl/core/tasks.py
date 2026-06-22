@@ -12,6 +12,7 @@ from system_sl.utils import load_data, save_data
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
 COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
+
 def load_tasks():
     """Fetches active tasks from storage and automatically processes system migrations for legacy string formats.
 
@@ -30,7 +31,7 @@ def load_tasks():
                             "title": task,
                             "created_at": datetime.now().isoformat(),
                             "deadline": None,
-                            "rank" : category
+                            "rank": category,
                         }
                     )
                     migrated = True
@@ -55,7 +56,7 @@ def save_tasks(tasks: dict):
     save_data(TASKS_FILE_PATH, tasks)
 
 
-def add_tasks( task_title: str ,task_type: str = "none", deadline: str = None):
+def add_tasks(task_title: str, task_type: str = "none", deadline: str = None):
     """Registers a new task inside a specific category pool while enforcing validation rules and avoiding duplicates.
 
     Args:
@@ -99,7 +100,7 @@ def add_tasks( task_title: str ,task_type: str = "none", deadline: str = None):
         "title": task_title,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "deadline": deadline,
-        "rank": task_type
+        "rank": task_type,
     }
 
     tasks.append(new_task)
@@ -180,7 +181,7 @@ def load_completed_tasks():
                             "title": task,
                             "created_at": datetime.now().isoformat(),
                             "deadline": None,
-                            "rank" : category
+                            "rank": category,
                         }
                     )
                     migrated = True
@@ -191,7 +192,6 @@ def load_completed_tasks():
         if migrated:
             save_tasks(new_data)
     return data
-
 
 
 def save_completed_tasks(tasks: dict):
@@ -233,6 +233,6 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
     save_completed_tasks(completed_tasks)
     return removed_title
 
-if  __name__ == "__main__":
+
+if __name__ == "__main__":
     print(mark_task_completed("Neggggg"))
- 
