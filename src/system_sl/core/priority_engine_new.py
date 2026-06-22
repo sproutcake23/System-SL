@@ -252,7 +252,7 @@ class ContextEngine:
 
     def __init__(self):
         self.setup = Setup()
-        self.completed_file = self.setup._get_file_path("completed_tasks.json")
+        self.completed_file = Path(self.setup._get_file_path("completed_tasks.json"))
         self.analyzer = TaskAnalyzer()
 
     def detect_context(self, all_tasks: List[dict]) -> str:
@@ -331,7 +331,7 @@ class ThompsonSampler(BaseWeightOptimizer):
 
     def __init__(self):
         self.setup = Setup()
-        self.state_file = self.setup._get_file_path("bandit_state.json")
+        self.state_file = Path(self.setup._get_file_path("bandit_state.json"))
         self.state = self._load_state()
 
     def _load_state(self) -> dict:
@@ -474,8 +474,8 @@ class PriorityPipeline:
 
     def __init__(self, use_thompson_sampling: bool = True):
         self.setup = Setup()
-        self.tasks_file = self.setup._get_file_path("tasks.json")
-        self.output_file = self.setup._get_file_path("prioritize.json")
+        self.tasks_file = Path(self.setup._get_file_path("tasks.json"))
+        self.output_file = Path(self.setup._get_file_path("prioritize.json"))
 
         self.context_engine = ContextEngine()
 
@@ -607,7 +607,7 @@ class PriorityPipeline:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def run_prioritization(display: bool = True, use_thompson: bool = True) -> dict:
+def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict:
     """Main application entry point."""
     try:
         # Prevent spacy overhead unless actually running
@@ -655,4 +655,4 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"✗ Error updating bandit: {e}")
     else:
-        run_prioritization()
+        run_prioritization(use_thompson=False)  # FIXME: ThompsonSampling not working
