@@ -2,24 +2,39 @@ import os
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv,set_key
+from dotenv import load_dotenv, set_key
 from PySide6.QtCore import QSize
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, \
-    QMessageBox, QFileDialog, QInputDialog
-from system_sl.frontend.gui.popup_windows import TasksWindow
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QPushButton,
+    QCheckBox,
+    QHBoxLayout,
+    QVBoxLayout,
+    QMessageBox,
+    QFileDialog,
+    QInputDialog,
+)
+from system_sl.frontend.gui.popup_windows import TasksWindow, OnboardingWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
 from system_sl.utils import AutostartManager, SystemNotification, get_tasks_file_path
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
+from system_sl.core.onboarding import PersonaStorageHandler
 from system_sl.services import BackgroundServiceController
-from system_sl.utils.audio_manager import play_sound, set_sound_setting, DEFAULT_SOUNDS_DIR
+from system_sl.utils.audio_manager import (
+    play_sound,
+    set_sound_setting,
+    DEFAULT_SOUNDS_DIR,
+)
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Main Menu")
-        self.setMinimumSize(QSize(700,400))
+        self.setMinimumSize(QSize(700, 400))
 
         self.autostart = AutostartManager()
         self.tasks_window = None
@@ -54,8 +69,8 @@ class MainWindow(QMainWindow):
         # right box — chatbot panel (system / friend modes)
         self.chat_panel = ChatPanel(self)
 
-        layout.addWidget(left_widget,stretch=1)
-        layout.addWidget(self.chat_panel,stretch=3)
+        layout.addWidget(left_widget, stretch=1)
+        layout.addWidget(self.chat_panel, stretch=3)
 
     def open_tasks_window(self):
         if self.tasks_window is None:
@@ -90,7 +105,7 @@ class MainWindow(QMainWindow):
             self,
             "Select Notification Sound",
             DEFAULT_SOUNDS_DIR,
-            "Audio Files (*.wav *.mp3)"
+            "Audio Files (*.wav *.mp3)",
         )
         if file_path:
             try:
@@ -133,18 +148,37 @@ def main():
                 "API Key Required",
                 "No GOOGLE_API_KEY was provided. The app cannot continue.",
             )
-            sys.exit(1) # Safely exit the application instead of raising an unhandled RuntimeError
-        
+
         api_key = key.strip()
         os.environ["GOOGLE_API_KEY"] = api_key
 
         env_path.touch(exist_ok=True)
         set_key(str(env_path), "GOOGLE_API_KEY", api_key)
 
+    try:
+        storage = PersonaStorageHandler()
+        if storage.is_first_time():
+            onboarding = OnboardingWindow()
+            main_window = None
 
-    window = MainWindow()
-    window.show()
+            def _on_onboarding_done(result):
+                nonlocal main_window
+                main_window = MainWindow()
+                main_window.show()
+
+            onboarding.onboarding_complete.connect(_on_onboarding_done)
+            onboarding.show()
+        else:
+            main_window = MainWindow()
+            main_window.show()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
+
     sys.exit(app.exec())
 
+
 if __name__ == "__main__":
-     main()
+    main()
