@@ -553,6 +553,18 @@ class PriorityPipeline:
 
         # Sort & Map
         scored_tasks.sort(key=lambda t: t["P_final"], reverse=True)
+
+        # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
+
+        manaul = load_manual_order()
+        if manaul:
+            pos = {(cat, title): i for i, (cat, title) in enumerate(manaul)}
+            scored_tasks.sort(
+                key=lambda t: pos.get(
+                    (t.get("category", ""), t.get("title", "")), len(pos)
+                )
+            )
+
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
             q = self._assign_quadrant(task)
@@ -605,6 +617,29 @@ class PriorityPipeline:
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 6 — PUBLIC API & CLI
 # ══════════════════════════════════════════════════════════════════════════════
+#
+# NOTE: ADDED TO SAVE THE DRAG ORDER FROM THE USER AND
+def load_manual_order() -> list:
+    """Return the saved manual order as a list of [category, title] pairs."""
+    file = Path(Setup()._get_file_path("task_order.json"))
+    if file.exists():
+        try:
+            with open(file, "r") as f:
+                return json.load(f).get("order", [])
+        except Exception:
+            pass
+    return []
+
+
+def save_manual_order(tasks: list) -> None:
+    """Persist the current display order so a manual drag survives restarts."""
+    file = Path(Setup()._get_file_path("task_order.json"))
+    order = [[t.get("category", ""), t.get("title", "")] for t in tasks]
+    try:
+        with open(file, "w") as f:
+            json.dump({"order": order}, f)
+    except Exception:
+        pass
 
 
 def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict:
