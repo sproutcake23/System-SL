@@ -21,9 +21,17 @@ class SystemNotification(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(800, 500)
-
+        self._center_window()
         self._setup_ui()
         self._apply_styles()
+
+    def _center_window(self):
+        screen = self.screen()
+        if screen:
+            screen_geo = screen.geometry() # resolution of the whole screen
+            x = (screen_geo.width() - self.width()) // 2
+            y = (screen_geo.height() - self.height()) // 2
+            self.move(x,y)
 
     def _setup_ui(self):
         self.main_layout = QVBoxLayout(self)
