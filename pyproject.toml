@@ -24,7 +24,11 @@ dependencies = [
   "numpy>=2.4.6",
   "openai>=2.38.0",
   "protobuf>=7.35.0",
-  "spacy>=3.8.14"]
+  "spacy>=3.8.14",
+  "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
+  "click>=8.4.1",
+  "pyspellchecker",
+]
 
 [project.scripts]
 # CHANGE 1: Route through your new system_sl parent package namespace

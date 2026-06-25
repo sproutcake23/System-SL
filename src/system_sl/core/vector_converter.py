@@ -6,6 +6,7 @@ Implements -
 It implements spacy md model and
 
 """
+
 from __future__ import annotations
 
 import os
@@ -18,6 +19,8 @@ from pathlib import Path
 import logging  # important we will use this for debugging.
 import json
 
+
+from system_sl.core.tasks import load_completed_tasks
 from system_sl.utils import get_tasks_file_path
 
 
@@ -39,7 +42,6 @@ class Setup:
     #     Windows - %APPDATA%/system-sl
     #     Linux - ~/.config/system-sl
 
-
     #     """
     #     prog = "system-sl"
     #     if os.name == "nt":
@@ -53,7 +55,7 @@ class Setup:
     #     )  # works as safety net if the parent floder won't exist it creates otherwise leaves.
 
     #     return config_dir
-    
+
     def _get_file_path(self, filename: str) -> Path:
         """
         This is same technique as used in tasks.py.
@@ -80,14 +82,15 @@ class Setup:
             log.info("spacy en_core_web_md is loaded. ")
             return model
         except OSError:
-            raise RuntimeError("[System Error model is not installed install manaually")
+            raise RuntimeError(
+                "[System Error model is not installed install manaually")
 
     # _nlp = None for lazy loading
 
-    def _get_model(self) -> Language:
+    def _get_model(self) -> "spacy.language.Language":
         """Return the global spacy model, loading it on first call."""
         if self._nlp is None:
-            self._model = self._load_spacy_model()
+            self._nlp = self._load_spacy_model()
         return self._nlp
 
 
@@ -176,54 +179,70 @@ class Decay_stradegy:
         self._LAMBDA = (
             math.log(2) / self.DECAY_HALF_LIFE_DAYS
         )  # Remembering old days physical chemistry
-        self._MIN_DECAY_WEIGHT = 0.05  # skip contributions below this (> 86 days old)
+        # skip contributions below this (> 86 days old)
+        self._MIN_DECAY_WEIGHT = 0.05
 
+    # def _read_completion_entry(self, entry: dict) -> tuple[str, datetime] | None:
+    #     """
+    #     Read a single completed_tasks.json entry into (title, completion_date).
+    #
+    #     completed_tasks.json entries are structured dicts written by
+    #     mark_task_completed() in tasks.py:
+    #
+    #        {
+    #         "title":        "Implement login endpoint",
+    #         "completed_at": "2025-05-01"
+    #        }
+    #
+    #     Parameters
+    #     ----------
+    #     entry : dict
+    #        A single entry from the completed_tasks.json list.
+    #        Must have "title" (str) and "completed_at" (str "YYYY-MM-DD").
+    #
+    #     Returns
+    #     -------
+    #     tuple (title: str, date: datetime) or None if entry is malformed.
+    #     """
+    #     # FIXME: Change tasks.py mark_task_completed function to correctly write completed.json
+    #     # NOTE: Also make changes in priortization_engine
+    #
+    #     if not isinstance(entry, dict):
+    #         log.debug("Skipping non-dict entry in completed_tasks.json: %r", entry)
+    #         return None
+    #
+    #     title = entry.get("title", "").strip()
+    #     date_str = entry.get("completed_at", "").strip()
+    #
+    #     if not title:
+    #         log.debug("Skipping entry with the empty title: %r", entry)
+    #         return None
+    #
+    #     if not date_str:
+    #         log.debug("Skipping entry with no completed_at date: %r", entry)
+    #         return None
+    #
+    #     try:
+    #         date = datetime.strptime(date_str, "%Y-%m-%d")
+    #         return title, date
+    #
+    #     except ValueError:
+    #         log.debug("Invalid completed_at date %r in entry %r", date_str, entry)
+    #         return None
     def _read_completion_entry(self, entry: dict) -> tuple[str, datetime] | None:
-        """
-        Read a single completed_tasks.json entry into (title, completion_date).
-
-        completed_tasks.json entries are structured dicts written by
-        mark_task_completed() in tasks.py:
-
-           {
-            "title":        "Implement login endpoint",
-            "completed_at": "2025-05-01"
-           }
-
-        Parameters
-        ----------
-        entry : dict
-           A single entry from the completed_tasks.json list.
-           Must have "title" (str) and "completed_at" (str "YYYY-MM-DD").
-
-        Returns
-        -------
-        tuple (title: str, date: datetime) or None if entry is malformed.
-        """
-        # FIXME: Change tasks.py mark_task_completed function to correctly write completed.json
-        # NOTE: Also make changes in priortization_engine
-
         if not isinstance(entry, dict):
-            log.debug("Skipping non-dict entry in completed_tasks.json: %r", entry)
             return None
 
         title = entry.get("title", "").strip()
         date_str = entry.get("completed_at", "").strip()
 
-        if not title:
-            log.debug("Skipping entry with the empty title: %r", entry)
-            return None
-
-        if not date_str:
-            log.debug("Skipping entry with no completed_at date: %r", entry)
+        if not title or not date_str:
             return None
 
         try:
             date = datetime.strptime(date_str, "%Y-%m-%d")
             return title, date
-
         except ValueError:
-            log.debug("Invalid completed_at date %r in entry %r", date_str, entry)
             return None
 
     def _compute_decay_weight(self, completion_date: datetime) -> float:
@@ -305,7 +324,8 @@ class Decay_stradegy:
 
         decay_vector = raw_mean_vector.astype(np.float32)
 
-        log.info("Decay vector built from %d tasks | weight=%.2f", count, total_weight)
+        log.info("Decay vector built from %d tasks | weight=%.2f",
+                 count, total_weight)
         # 3. Return the raw_norm so the fusion engine can use it
         return decay_vector, count
 
@@ -321,7 +341,7 @@ class Decay_stradegy:
         )  # ALigned tasks = 10 , non-aligned tasks = 30
         x = STEEEPNESS * (decay_task_count - dynamic_midpoint)
         decay_w = MAX_DECAY / (
-            1 + math.exp(-1)
+            1 + math.exp(-x)
         )  # symoid type function for reaching the threashold
 
         return round(1.0 - decay_w, 4), round(
@@ -333,10 +353,11 @@ class Caching:
     def __init__(self) -> None:
         # Initialize dependencies ONCE here
         self.setup = Setup()
-        
+
         # Define all file paths ONCE here
-        self.persona_path =  Path(self.setup._get_file_path("persona.json"))
-        self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
+        self.persona_path = Path(self.setup._get_file_path("persona.json"))
+        self.completed_path = Path(
+            self.setup._get_file_path("completed_tasks.json"))
         self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
 
     def _get_file_mtime(self, path: Path) -> float:
@@ -361,13 +382,19 @@ class Caching:
             persona_mtime = self._get_file_mtime(self.persona_path)
             completed_mtime = self._get_file_mtime(self.completed_path)
 
-            if (persona_mtime > cache["persona_mtime"] or
-                    completed_mtime > cache["completed_mtime"]):
-                log.info("Source files changed — cache invalidated, rebuilding vector")
+            if (
+                persona_mtime > cache["persona_mtime"]
+                or completed_mtime > cache["completed_mtime"]
+            ):
+                log.info(
+                    "Source files changed — cache invalidated, rebuilding vector")
                 return None
 
             vector = np.array(cache["vector"], dtype=np.float32)
-            log.info("Loaded user vector from cache (built %s)", cache.get("built_at", "unknown"))
+            log.info(
+                "Loaded user vector from cache (built %s)",
+                cache.get("built_at", "unknown"),
+            )
             return vector
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
@@ -389,20 +416,20 @@ class Caching:
         except Exception as e:
             log.warning("Could not save vector cache: %s", e)
 
+
 class Helper:
     def __init__(self):
         # Initialize dependencies ONCE here
         self.setup = Setup()
-        
+
         # Define all file paths ONCE here
-        self.persona_path =  Path(self.setup._get_file_path("persona.json"))
+        self.persona_path = Path(self.setup._get_file_path("persona.json"))
         self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
-        self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
-        
+        self.cache_path=Path(self.setup._get_file_path("vector_cache.json"))
 
     def get_vector_info(self) -> dict:
         """Helper to return a human-readable summary of the current vector."""
-        info = {
+        info={
             "persona_exists": self.persona_path.exists(),
             "completed_tasks_exists": self.completed_path.exists(),
             "cache_exists": self.cache_path.exists(),
@@ -415,17 +442,21 @@ class Helper:
         if self.cache_path.exists():
             try:
                 with open(self.cache_path, "r", encoding="utf-8") as f:
-                    cache = json.load(f)
-                info["built_at"] = cache.get("built_at")
+                    cache=json.load(f)
+                info["built_at"]=cache.get("built_at")
             except Exception:
                 pass
 
         if self.persona_path.exists():
             try:
                 with open(self.persona_path, "r", encoding="utf-8") as f:
-                    persona = json.load(f)
-                info["persona_answers"] = [
-                    {"category": r["category"], "answer": r["answer"], "impact": r["impact"]}
+                    persona=json.load(f)
+                info["persona_answers"]=[
+                    {
+                        "category": r["category"],
+                        "answer": r["answer"],
+                        "impact": r["impact"],
+                    }
                     for r in persona.get("responses", [])
                 ]
             except Exception:
@@ -434,40 +465,44 @@ class Helper:
         if self.completed_path.exists():
             try:
                 with open(self.completed_path, "r", encoding="utf-8") as f:
-                    completed = json.load(f)
-                count = len(completed) if isinstance(completed, list) else 0
-                info["completed_task_count"] = count
-                
-                decay_strategy = Decay_stradegy()
-                pw, dw = decay_strategy._build_fusion_weights(count, 1.0) 
-                info["fusion_weights"] = {"persona": pw, "decay": dw}
+                    completed=json.load(f)
+                count=len(completed) if isinstance(completed, list) else 0
+                info["completed_task_count"]=count
+
+                decay_strategy=Decay_stradegy()
+                pw, dw=decay_strategy._build_fusion_weights(count, 1.0)
+                info["fusion_weights"]={"persona": pw, "decay": dw}
             except Exception:
                 pass
 
         return info
 
+
 class Fusion:
     def __init__(self) -> None:
         # Initialize dependencies ONCE here
-        self.setup = Setup()
-        
+        self.setup=Setup()
+
         # Define all file paths ONCE here
-        self.persona_path =  Path(self.setup._get_file_path("persona.json"))
-        self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
-        self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
-        self.cache = Caching()
+        self.persona_path=Path(self.setup._get_file_path("persona.json"))
+        self.completed_path=Path(
+            self.setup._get_file_path("completed_tasks.json"))
+        self.cache_path=Path(self.setup._get_file_path("vector_cache.json"))
+        self.cache=Caching()
 
-
-    def build_user_vector(self, use_cache: bool = True) -> np.ndarray:
+    def build_user_vector(self, use_cache: bool=True) -> np.ndarray:
         """
         The main orchestrator: Builds or loads the 300-dim user vector.
         Brings together Real_worker and Decay_stradegy.
         """
         if not self.persona_path.exists():
-            raise FileNotFoundError(f"persona.json not found at {self.persona_path}. Complete onboarding first.")
+            raise FileNotFoundError(
+                f"persona.json not found at {
+                    self.persona_path}. Complete onboarding first."
+            )
 
         if use_cache:
-            cached = self.cache._load_cache()
+            cached=self.cache._load_cache()
             if cached is not None:
                 return cached
 
@@ -475,63 +510,78 @@ class Fusion:
 
         # Load JSONs
         with open(self.persona_path, "r", encoding="utf-8") as f:
-            persona = json.load(f)
+            persona=json.load(f)
 
-        completed_tasks = []  # FIXME: Check we have to tuple or list
+        completed_tasks=[]  # FIXME: Check we have to tuple or list
         if self.completed_path.exists():
-            with open(self.completed_path, "r", encoding="utf-8") as f:
+
                 try:
-                    completed_tasks = json.load(f) 
-                except json.JSONDecodeError:
-                    log.warning("completed_tasks.json is malformed — ignoring history")
+                    # completed_tasks=json.load(f)
+                    completed_tasks=load_completed_tasks(self.completed_path)
+
+                except Exception as e:
+                    print(f"Error {e}")
         else:
             log.info("No completed_tasks.json found — using persona only")
 
         # Phase 1: Persona Vector
         log.info("─── Phase 1: Persona Vector ─────────────────────")
-        worker = Real_worker()
-        blob = worker._build_persona_blob(persona)
-        persona_vec = worker._vectorize_blob(blob)
-        log.info("Persona vector built | norm=%.4f", float(np.linalg.norm(persona_vec)))
+        worker=Real_worker()
+        blob=worker._build_persona_blob(persona)
+        persona_vec=worker._vectorize_blob(blob)
+        log.info("Persona vector built | norm=%.4f",
+                 float(np.linalg.norm(persona_vec)))
 
         # Phase 2: Temporal Decay Vector
         log.info("─── Phase 2: Temporal Decay Vector ──────────────")
-        decay_strategy = Decay_stradegy()
-        decay_vec, task_count = decay_strategy._build_decay_vector(completed_tasks)
+        decay_strategy=Decay_stradegy()
+
+        decay_vec, task_count=decay_strategy._build_decay_vector(
+            completed_tasks)
+
 
         # Phase 3: Fusion and Coherence
         log.info("─── Phase 3: Fusion ─────────────────────────────")
-        
+
         # Coherence calculation
         if task_count > 0 and np.linalg.norm(decay_vec) > 0:
-            sim = float(np.dot(persona_vec, decay_vec) /
-                        (np.linalg.norm(persona_vec) * np.linalg.norm(decay_vec)))
-            coherence = max(0.0, sim)
+            sim=float(
+                np.dot(persona_vec, decay_vec)
+                / (np.linalg.norm(persona_vec) * np.linalg.norm(decay_vec))
+            )
+            coherence=max(0.0, sim)
         else:
-            coherence = 0.0
+            coherence=0.0
 
-        persona_w_adj, decay_w_adj = decay_strategy._build_fusion_weights(task_count, coherence)
+        persona_w_adj, decay_w_adj=decay_strategy._build_fusion_weights(
+            task_count, coherence
+        )
 
         log.info(
             "Fusion — coherence=%.3f → final(persona=%.2f decay=%.2f) tasks=%d",
-            coherence, persona_w_adj, decay_w_adj, task_count
+            coherence,
+            persona_w_adj,
+            decay_w_adj,
+            task_count,
         )
 
-        fused = (persona_w_adj * persona_vec) + (decay_w_adj * decay_vec)
+        fused=(persona_w_adj * persona_vec) + (decay_w_adj * decay_vec)
 
         # L2 Normalise
-        norm = np.linalg.norm(fused)
+        norm=np.linalg.norm(fused)
         if norm > 0:
-            fused = (fused / norm).astype(np.float32)
+            fused=(fused / norm).astype(np.float32)
         else:
             log.error("Fused vector has zero norm — returning zeros.")
-            fused = np.zeros(300, dtype=np.float32)
+            fused=np.zeros(300, dtype=np.float32)
 
-        log.info("Final vector | norm=%.4f (should be ~1.0)", float(np.linalg.norm(fused)))
+        log.info(
+            "Final vector | norm=%.4f (should be ~1.0)", float(
+                np.linalg.norm(fused))
+        )
 
         self.cache._save_cache(fused)
         return fused
-
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -544,23 +594,34 @@ if __name__ == "__main__":
     print("═" * 60)
 
     try:
-        helper = Helper()
-        fusion_engine = Fusion()
-        info = helper.get_vector_info()
-        
-        print(f"\n  Persona file   : {'✓ found' if info['persona_exists'] else '✗ MISSING'}")
-        print(f"  Completed tasks: {'✓ found' if info['completed_tasks_exists'] else '✗ not found'}")
-        print(f"  Cache          : {'✓ exists' if info['cache_exists'] else '○ none'}")
+        helper=Helper()
+        fusion_engine=Fusion()
+        info=helper.get_vector_info()
+
+        print(
+            f"\n  Persona file   : {
+                '✓ found' if info['persona_exists'] else '✗ MISSING'}"
+        )
+        print(
+            f"  Completed tasks: {
+                '✓ found' if info['completed_tasks_exists'] else '✗ not found'}"
+        )
+        print(f"  Cache          : {
+              '✓ exists' if info['cache_exists'] else '○ none'}")
         print(f"  Completed count: {info['completed_task_count']}")
-        print(f"  Fusion weights : persona={info['fusion_weights']['persona']:.2f}  decay={info['fusion_weights']['decay']:.2f}")
+        print(
+            f"  Fusion weights : persona={info['fusion_weights']['persona']:.2f}  decay={
+                info['fusion_weights']['decay']:.2f}"
+        )
 
         if not info["persona_exists"]:
             print("\n  ✗ Cannot build vector — run onboarding first.")
         else:
             print("\n  Building vector (may take a few seconds on first run)...")
-            vec = fusion_engine.build_user_vector(use_cache=False)
+            vec=fusion_engine.build_user_vector(use_cache=False)
             print(f"\n  Vector shape : {vec.shape}")
-            print(f"  Vector norm  : {np.linalg.norm(vec):.6f}  (should be ~1.0)")
+            print(f"  Vector norm  : {
+                  np.linalg.norm(vec):.6f}  (should be ~1.0)")
             print(f"  Non-zero dims: {np.count_nonzero(vec)}")
             print(f"  Top 5 values : {sorted(vec, reverse=True)[:5]}")
             print("\n  ✓ Vector built successfully.")

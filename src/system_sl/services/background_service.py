@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import QObject, QTimer
 from system_sl.utils import SystemNotification
-from system_sl.core import get_random_task
+from system_sl.core.tasks import get_random_task, get_topn_task
 
 
 class BackgroundServiceController(QObject):
@@ -19,11 +19,9 @@ class BackgroundServiceController(QObject):
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll_and_render_task)
-        self.timer.start(3600000)  # Fires once every hour
+        self.timer.start(5000)
 
     def poll_and_render_task(self) -> None:
         """Queries core task modules and passes data changes directly to the UI panel."""
-        task_info = get_random_task()
-        if task_info:
-            category, title = task_info
-            self.view.display_message(category, title)
+        ntask = get_topn_task()
+        self.view.display_message(ntask)

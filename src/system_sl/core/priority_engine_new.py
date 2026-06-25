@@ -1,0 +1,692 @@
+"""
+╔══════════════════════════════════════════════════════════════════════╗
+║  src/system_sl/core/priority_engine.py                               ║
+║  Mathematical Priority Engine (Refactored)                           ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Features:                                                           ║
+║  1. No Repetition: Uses Setup() & Fusion() from vector_converter.    ║
+║  2. Class-Based: Grouped by responsibility (Analyzer, Context, etc). ║
+║  3. Pluggable Strategies: Thompson Sampling can be swapped/removed   ║
+║     without breaking the core gravity logic.                         ║
+║  4. Dev-Friendly: Clean separation of concerns and type hinting.     ║
+╚══════════════════════════════════════════════════════════════════════╝
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import logging
+import numpy as np
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, Dict, List, Any
+from spellchecker import SpellChecker
+
+# ── Import Shared Dependencies to avoid repetition ──────────────────────
+from system_sl.core.vector_converter import Setup, Fusion
+
+logging.basicConfig(level=logging.INFO, format="[priority_engine] %(message)s")
+log = logging.getLogger(__name__)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 1 — TASK ANALYZER (Text & Deadline Features)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TaskAnalyzer:
+    """Handles parsing and NLP inferences for individual tasks."""
+
+    _HEAVY_VERBS = {
+        "research",
+        "design",
+        "architect",
+        "implement",
+        "analyze",
+        "analyse",
+        "debug",
+        "optimize",
+        "optimise",
+        "write",
+        "build",
+        "learn",
+        "study",
+        "develop",
+        "create",
+        "refactor",
+        "model",
+        "investigate",
+        "solve",
+        "understand",
+        "evaluate",
+        "construct",
+        "engineer",
+        "plan",
+    }
+
+    _LIGHT_VERBS = {
+        "check",
+        "reply",
+        "send",
+        "update",
+        "review",
+        "read",
+        "call",
+        "schedule",
+        "buy",
+        "clean",
+        "organize",
+        "organise",
+        "email",
+        "message",
+        "remind",
+        "pay",
+        "order",
+        "book",
+        "confirm",
+        "notify",
+        "post",
+        "upload",
+        "download",
+        "print",
+        "submit",
+        "fill",
+    }
+
+    def __init__(self):
+        self.setup = Setup()
+        self.spell = (
+            SpellChecker()
+        )  # NOTE : We have to check is it working or making a blunder
+
+        self.spell.word_frequency.load_words(
+            [
+                "api",
+                "json",
+                "frontend",
+                "backend",
+                "refactor",
+                "repo",
+                "github",
+                "spacy",
+                "ui",
+                "ux",
+                "sql",
+                "css",
+                "html",
+            ]
+        )
+
+    def correct_typos(self, text: str) -> str:
+        """Fixes spelling mistakes in a string before NLP processing."""
+        if not text:
+            return ""
+
+        words = text.split()
+        corrected_words = []
+
+        for word in words:
+            # Get the single most likely correction
+            correction = self.spell.correction(word)
+
+            # If spellchecker returns None (word completely unknown) or the correction,
+            # we use it, otherwise fallback to original word
+            if correction:
+                corrected_words.append(correction)
+            else:
+                corrected_words.append(word)
+
+        return " ".join(corrected_words)
+
+    def parse_deadline(self, deadline_str: Optional[str]) -> Optional[datetime]:
+        """Robustly parse any deadline format into a datetime object."""
+        if not deadline_str:
+            return None
+
+        s = str(deadline_str).replace("Z", "").replace("+00:00", "").strip()
+        for fmt in [
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d",
+        ]:
+            try:
+                return datetime.strptime(s[: len(fmt) + 2].strip(), fmt)
+            except ValueError:
+                continue
+        return None
+
+    def infer_cognitive_weight(self, title: str) -> float:
+        """Infer cognitive load of a task from its title using spaCy POS tagging."""
+        try:
+            clean_title = self.correct_typos(title.lower())  # Typo correction
+
+            nlp = self.setup._get_model()
+            doc = nlp(clean_title)
+            verbs = {token.lemma_ for token in doc if token.pos_ == "VERB"}
+
+            heavy_hits = len(verbs & self._HEAVY_VERBS)
+            light_hits = len(verbs & self._LIGHT_VERBS)
+
+            W = 0.5 + (heavy_hits * 0.15) - (light_hits * 0.10)
+            return round(max(0.1, min(1.0, W)), 4)
+        except Exception as e:
+            log.debug(f"Cognitive weight inference failed: {e}")
+            return 0.5
+
+    def compute_intrinsic_importance(
+        self, title: str, user_vector: np.ndarray
+    ) -> float:
+        """Compute semantic alignment with the user's vector."""
+        try:
+            clean_title = self.correct_typos(title.lower())  # typo correction
+            nlp = self.setup._get_model()
+            doc = nlp(clean_title)
+
+            if not doc.has_vector:
+                return 0.5
+
+            task_vec = doc.vector.astype(np.float64)
+            user_vec = user_vector.astype(np.float64)
+
+            magnitude = np.linalg.norm(task_vec) * np.linalg.norm(user_vec)
+            if magnitude == 0:
+                return 0.5
+
+            sim = float(np.dot(task_vec, user_vec) / magnitude)
+            I = 0.1 + (sim + 1.0) / 2.0 * 0.9  # Map [-1, 1] to [0.1, 1.0]
+            return round(float(I), 6)
+        except Exception:
+            return 0.5
+
+    def compute_time_remaining(self, task: dict, W: float) -> float:
+        """Compute days remaining until deadline (or soft window if no deadline)."""
+        dl = self.parse_deadline(task.get("deadline"))
+        now = datetime.now()
+
+        if dl is not None:
+            delta = (dl - now).total_seconds() / 86400
+            return max(0.0, delta)
+
+        # Soft deadline logic
+        created_str = task.get("created_at", "")
+        created_dt = self.parse_deadline(created_str) or now
+        days_since = max(0, (now - created_dt).days)
+
+        natural_window = 14 + (W * 46)
+        D = natural_window - days_since
+        return max(1.0, D)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 2 — CONTEXT ENGINE (System State Detection)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class ContextEngine:
+    """tries toDetects user's state to shift the manupluate the claculated W, I AND Dmultipliers.
+    REMEMBER : IF u want ur growth oreinted and work's for goal try not to add tasks which u will not do if deadline is near this is current limitation
+    """
+
+    PROFILES = {
+        "PRESSURE": {
+            "W_mult": 1.0,
+            "I_mult": 0.6,
+            "D_compress": 0.5,
+            "desc": "2+ tasks due soon",
+        },
+        "GROWTH": {
+            "W_mult": 1.0,
+            "I_mult": 1.8,
+            "D_compress": 2.0,
+            "desc": "Clear runway",
+        },
+        "RECOVERY": {
+            "W_mult": 0.6,
+            "I_mult": 1.0,
+            "D_compress": 1.0,
+            "desc": "Backlog clearing",
+        },
+    }
+
+    def __init__(self):
+        self.setup = Setup()
+        self.completed_file = Path(self.setup._get_file_path("completed_tasks.json"))
+        self.analyzer = TaskAnalyzer()
+
+    def detect_context(self, all_tasks: List[dict]) -> str:
+        now = datetime.now()
+        due_48h, overdue = 0, 0
+
+        for task in all_tasks:
+            dl = self.analyzer.parse_deadline(task.get("deadline"))
+            if not dl:
+                continue
+
+            delta_days = (dl - now).total_seconds() / 86400
+            if delta_days <= 2:
+                due_48h += 1
+            if dl < now:
+                overdue += 1
+
+        if due_48h >= 2:
+            return "PRESSURE"
+        if overdue >= 3:
+            return "RECOVERY"
+
+        completed_today = self._count_completions_today()
+        if len(all_tasks) > 5 and completed_today == 0:
+            return "RECOVERY"
+
+        return "GROWTH"
+
+    def _count_completions_today(self) -> int:
+        if not self.completed_file.exists():
+            return 0
+        try:
+            with open(self.completed_file, "r", encoding="utf-8") as f:
+                completed = json.load(f)
+            today_str = datetime.now().strftime("%Y-%m-%d")
+
+            count = 0
+            if isinstance(completed, list):
+                count += sum(
+                    1
+                    for e in completed
+                    if isinstance(e, dict) and e.get("completed_at") == today_str
+                )
+            return count
+        except Exception:
+            return 0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 3 — PLUGGABLE OPTIMIZERS (Rule 3)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class BaseWeightOptimizer:
+    """Interface for optimization strategies. Pluggable architecture."""
+
+    def get_confidence(self) -> float:
+        return 1.0  # Default to full confidence in context without bandit
+
+    def get_weights(self) -> Dict[str, float]:
+        return {"semantic_w": 0.33, "urgency_w": 0.33, "momentum_w": 0.34}
+
+    def record_feedback(self, task_title: str, ranked_tasks: List[dict]) -> None:
+        pass
+
+
+class ThompsonSampler(BaseWeightOptimizer):
+    """Multi-Armed Bandit strategy. Can be omitted safely."""
+
+    _DEFAULT_STATE = {
+        "semantic_w": {"alpha": 2, "beta": 2},
+        "urgency_w": {"alpha": 2, "beta": 2},
+        "momentum_w": {"alpha": 2, "beta": 2},
+    }
+
+    def __init__(self):
+        self.setup = Setup()
+        self.state_file = Path(self.setup._get_file_path("bandit_state.json"))
+        self.state = self._load_state()
+
+    def _load_state(self) -> dict:
+        if self.state_file.exists():
+            try:
+                with open(self.state_file, "r") as f:
+                    data = json.load(f)
+                return {
+                    k: data.get(k, v.copy()) for k, v in self._DEFAULT_STATE.items()
+                }
+            except Exception:
+                pass
+        return {k: v.copy() for k, v in self._DEFAULT_STATE.items()}
+
+    def _save_state(self) -> None:
+        with open(self.state_file, "w") as f:
+            json.dump(self.state, f, indent=2)
+
+    def get_confidence(self) -> float:
+        total = sum(
+            p["alpha"] + p["beta"] - 4
+            for k, p in self.state.items()
+            if not k.startswith("_")
+        )
+        return min(1.0, max(0.0, total / 30.0))
+
+    def get_weights(self) -> Dict[str, float]:
+        raw = {
+            k: float(np.random.beta(p["alpha"], p["beta"]))
+            for k, p in self.state.items()
+        }
+        total = sum(raw.values())
+        return (
+            {k: round(v / total, 6) for k, v in raw.items()}
+            if total
+            else super().get_weights()
+        )
+
+    def record_feedback(self, task_title: str, ranked_tasks: List[dict]) -> None:
+        rank = next(
+            (
+                i
+                for i, t in enumerate(ranked_tasks)
+                if t.get("title", "").strip().lower() == task_title.strip().lower()
+            ),
+            None,
+        )
+
+        if rank is None:
+            return
+
+        if rank == 0:
+            for key in ["semantic_w", "urgency_w", "momentum_w"]:
+                self.state[key]["alpha"] += 1
+        elif rank >= 2:
+            self.state["urgency_w"]["beta"] += 1
+            self.state["semantic_w"]["alpha"] += 1
+
+        self._save_state()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — GRAVITY CORE (Math Calculation)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class GravityEngine:
+    """Calculates physical gravitational pull of tasks."""
+
+    def __init__(self, optimizer: BaseWeightOptimizer = None):
+        self.analyzer = TaskAnalyzer()
+        self.optimizer = optimizer or BaseWeightOptimizer()  # Pluggable!
+
+    def score_task(
+        self, task: dict, user_vector: np.ndarray, context_str: str, ctx_profile: dict
+    ) -> dict:
+        W = (
+            float(task.get("cognitive_weight"))
+            if task.get("cognitive_weight") is not None
+            else self.analyzer.infer_cognitive_weight(task.get("title", ""))
+        )
+        I = self.analyzer.compute_intrinsic_importance(
+            task.get("title", ""), user_vector
+        )
+        D = self.analyzer.compute_time_remaining(task, W)
+
+        epsilon = 0.1
+        P_base = (W * I) / (D**2 + epsilon)
+
+        # Context Multipliers
+        W_eff = W * ctx_profile["W_mult"]
+        I_eff = I * ctx_profile["I_mult"]
+        D_eff = D * ctx_profile["D_compress"]
+        P_context = (W_eff * I_eff) / (D_eff**2 + epsilon)
+
+        # Strategy Blending (falls back to pure context if Thompson is omitted)
+        conf = self.optimizer.get_confidence()
+        P_final = (P_base * (1 - conf)) + (P_context * conf)
+
+        # Derived metrics
+        created_dt = (
+            self.analyzer.parse_deadline(task.get("created_at", "")) or datetime.now()
+        )
+        days_old = max(0, (datetime.now() - created_dt).days)
+
+        return {
+            "W": round(W, 4),
+            "I": round(I, 4),
+            "D": round(D, 2),
+            "epsilon": epsilon,
+            "P_base": round(P_base, 6),
+            "P_context": round(P_context, 6),
+            "P_final": round(P_final, 6),
+            "pull_normalized": 0.0,  # Assigned later
+            "semantic_score": round(I, 4),
+            "urgency_score": round(1.0 / (1.0 + D), 4),
+            "momentum_score": round(min(1.0, days_old / 30.0), 4),
+            "context_applied": context_str,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — PRIORITY ORCHESTRATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class PriorityPipeline:
+    """Manages the full flow: loading, scoring, mapping, and saving."""
+
+    QUADRANTS = {
+        "Q1": {"name": "DO NOW", "sub": "High pull, High importance", "icon": "⚡"},
+        "Q2": {"name": "SCHEDULE", "sub": "Low pull, High importance", "icon": "📅"},
+        "Q3": {"name": "DEFER", "sub": "High pull, Low importance", "icon": "⏩"},
+        "Q4": {
+            "name": "CONSIDER DROPPING",
+            "sub": "Low pull, Low importance",
+            "icon": "🗑",
+        },
+    }
+
+    def __init__(self, use_thompson_sampling: bool = True):
+        self.setup = Setup()
+        self.tasks_file = Path(self.setup._get_file_path("tasks.json"))
+        self.output_file = Path(self.setup._get_file_path("prioritize.json"))
+
+        self.context_engine = ContextEngine()
+
+        # Pluggable Optimizer Injection
+        self.optimizer = (
+            ThompsonSampler() if use_thompson_sampling else BaseWeightOptimizer()
+        )
+        self.gravity_engine = GravityEngine(self.optimizer)
+
+    def _assign_quadrant(self, scores: dict) -> str:
+        high_pull = scores["pull_normalized"] > 0.5
+        high_importance = scores["semantic_score"] > 0.5
+
+        if high_pull and high_importance:
+            return "Q1"
+        if not high_pull and high_importance:
+            return "Q2"
+        if high_pull and not high_importance:
+            return "Q3"
+        return "Q4"
+
+    def run(self, user_vector: np.ndarray) -> dict:
+        """Execute full prioritization pipeline."""
+        if not self.tasks_file.exists():
+            return self._empty_result("tasks.json not found")
+
+        try:
+            with open(self.tasks_file, "r", encoding="utf-8") as f:
+                tasks_data = json.load(f)
+        except Exception as e:
+            return self._empty_result(f"Parse error: {e}")
+
+        # Flatten tasks
+        # NOTE: changes made such that it can read old data format also
+        if isinstance(tasks_data, list):
+            all_tasks = [t for t in tasks_data if isinstance(t, dict)]
+        else:
+            # for backward_compact
+            all_tasks = [
+                task
+                for task_list in tasks_data.values()
+                if isinstance(task_list, list)
+                for task in task_list
+                if isinstance(task, dict)
+            ]
+
+        if not all_tasks:
+            return self._empty_result("No tasks found")
+
+        # Context & Strategy
+        ctx_str = self.context_engine.detect_context(all_tasks)
+        ctx_profile = self.context_engine.PROFILES[ctx_str]
+
+        bandit_conf = self.optimizer.get_confidence()
+        bandit_weights = self.optimizer.get_weights()
+
+        # Score
+        scored_tasks = []
+        for task in all_tasks:
+            scores = self.gravity_engine.score_task(
+                task, user_vector, ctx_str, ctx_profile
+            )
+            scored_tasks.append(
+                {
+                    "title": task.get("title", "untitled"),
+                    "category": task.get("_category", ""),
+                    "deadline": task.get("deadline"),
+                    "created_at": task.get("created_at"),
+                    **scores,
+                }
+            )
+
+        # Normalize
+        p_vals = [t["P_final"] for t in scored_tasks]
+        p_min, p_range = min(p_vals), max(p_vals) - min(p_vals)
+        for t in scored_tasks:
+            t["pull_normalized"] = (
+                round((t["P_final"] - p_min) / p_range, 6) if p_range > 0 else 0.5
+            )
+
+        # Sort & Map
+        scored_tasks.sort(key=lambda t: t["P_final"], reverse=True)
+
+        # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
+
+        manual = load_manual_order()
+        if manual:
+            pos = {title: i for i, title in enumerate(manual)}
+            scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
+
+        quadrants = {q: [] for q in self.QUADRANTS}
+        for task in scored_tasks:
+            q = self._assign_quadrant(task)
+            task["quadrant"] = q
+            quadrants[q].append(task)
+
+        # Output payload
+        output = {
+            "generated_at": datetime.now().isoformat(),
+            "context": ctx_str,
+            "context_description": ctx_profile["desc"],
+            "bandit_confidence": round(bandit_conf, 4),
+            "bandit_weights": bandit_weights,
+            "task_count": len(scored_tasks),
+            "quadrant_counts": {q: len(tasks) for q, tasks in quadrants.items()},
+            "quadrants": {
+                q: {
+                    "name": self.QUADRANTS[q]["name"],
+                    "icon": self.QUADRANTS[q]["icon"],
+                    "subtitle": self.QUADRANTS[q]["sub"],
+                    "tasks": tasks,
+                }
+                for q, tasks in quadrants.items()
+            },
+            "all_tasks_ranked": scored_tasks,
+        }
+
+        with open(self.output_file, "w") as f:
+            json.dump(output, f, indent=2, default=str)
+
+        return output
+
+    def _empty_result(self, reason: str) -> dict:
+        return {
+            "generated_at": datetime.now().isoformat(),
+            "context": "GROWTH",
+            "context_description": reason,
+            "bandit_confidence": 0.0,
+            "bandit_weights": {},
+            "task_count": 0,
+            "quadrant_counts": {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0},
+            "quadrants": {
+                q: {**self.QUADRANTS[q], "tasks": []} for q in self.QUADRANTS
+            },
+            "all_tasks_ranked": [],
+            "_reason": reason,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 6 — PUBLIC API & CLI
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# NOTE: ADDED TO SAVE THE DRAG ORDER FROM THE USER AND
+def load_manual_order() -> list:
+    file = Path(Setup()._get_file_path("task_order.json"))
+    if file.exists():
+        try:
+            with open(file, "r") as f:
+                return json.load(f).get("order", [])
+        except Exception:
+            pass
+    return []
+
+
+# NOTE: Changed and removed the category things
+def save_manual_order(tasks: list) -> None:
+    file = Path(Setup()._get_file_path("task_order.json"))
+    order = [t.get("title", "") for t in tasks]
+    try:
+        with open(file, "w") as f:
+            json.dump({"order": order}, f)
+    except Exception:
+        pass
+
+
+def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict:
+    """Main application entry point."""
+    try:
+        # Prevent spacy overhead unless actually running
+        user_vec = Fusion().build_user_vector()
+    except Exception as e:
+        print(f"\n[ERROR] Could not build user vector: {e}")
+        return PriorityPipeline()._empty_result("Vector generation failed")
+
+    pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)
+    result = pipeline.run(user_vec)
+
+    if display:
+        display_prioritized_tasks(result)
+
+    return result
+
+
+def display_prioritized_tasks(result: dict) -> None:
+    print(f"\n══ ⚔ SYSTEM TASK PRIORITIZATION ══")
+    print(f"Context : {result.get('context')} - {result.get('context_description')}")
+    print(f"Bandit  : {result.get('bandit_confidence'):.1%} confidence\n")
+
+    for q_key, data in result.get("quadrants", {}).items():
+        if not data["tasks"]:
+            continue
+        print(f"── {data['icon']} {data['name']} ──")
+        for t in data["tasks"]:
+            bar = "█" * int(t["pull_normalized"] * 20)
+            print(f" [{bar:<20}] {t['title'][:40]} (P={t['P_final']:.4f})")
+    print("\n")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if "--record" in sys.argv:
+        idx = sys.argv.index("--record")
+        if idx + 1 < len(sys.argv):
+            title = sys.argv[idx + 1]
+            try:
+                with open(Setup()._get_file_path("prioritize.json"), "r") as f:
+                    ranked = json.load(f).get("all_tasks_ranked", [])
+                ThompsonSampler().record_feedback(title, ranked)
+                print(f"✓ Bandit updated for '{title}'")
+            except Exception as e:
+                print(f"✗ Error updating bandit: {e}")
+    else:
+        run_prioritization(use_thompson=False)  # FIXME: ThompsonSampling not working

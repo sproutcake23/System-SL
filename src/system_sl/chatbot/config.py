@@ -51,9 +51,7 @@ def load_config() -> ChatConfig:
         or DEFAULT_API_KEY
     )
     base_url = (
-        data.get("base_url")
-        or os.environ.get("LLM_BASE_URL")
-        or DEFAULT_BASE_URL
+        data.get("base_url") or os.environ.get("LLM_BASE_URL") or DEFAULT_BASE_URL
     )
 
     return ChatConfig(

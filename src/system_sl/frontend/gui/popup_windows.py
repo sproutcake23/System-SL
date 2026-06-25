@@ -15,18 +15,18 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from PySide6.QtCore import QDate, QSize, Qt, Signal, QTimer
 from system_sl.core.onboarding import ONBOARDING_QUESTIONS, PersonaStorageHandler
 from system_sl.core.tasks import (
     add_tasks,
     mark_task_completed,
     remove_tasks,
 )
-from system_sl.core.prioritization import (
-    prioritize_tasks,
-    record_reorder_feedback,
+from system_sl.core.priority_engine_new import (
+    run_prioritization,
+    ThompsonSampler,
     save_manual_order,
-)
+)  # we are importing run_prioritization from api section(priority_engine_new)
 
 
 # GUI-added tasks no longer carry a user-chosen category — the model assigns one
@@ -129,7 +129,10 @@ class TasksWindow(QWidget):
 
     def _refresh_list(self):
         # Re-rank from scratch via the prioritization engine, then render.
-        self._order = prioritize_tasks()
+        result = run_prioritization(
+            display=False
+        )  # NOTE: To turn on the thompson sampling we also have to make changes here
+        self._order = result.get("all_tasks_ranked", [])
         self._render(self._order)
 
     def _render(self, tasks):
@@ -140,40 +143,53 @@ class TasksWindow(QWidget):
             task["rank"] = rank
             title = task.get("title", "")
             deadline = task.get("deadline")
+            p_score = task.get(
+                "P_final", 0.0
+            )  # just added pull score variable to render
             display = f"{rank}. {title}"
             if deadline:
                 display += f"  → due {deadline}"
+
+            display += f" [P={p_score:.3f}]"
             item = QListWidgetItem(display)
             # Keep (category, title) so complete/remove still address the right
             # task even though the category is no longer shown.
-            item.setData(Qt.UserRole, (task.get("category", ""), title))
+            # NOTE: removed the category thing
+            item.setData(Qt.UserRole, title)
             self.tasks_list_widget.addItem(item)
             self._text_to_task[display] = task
 
     def _on_reordered(self, moved_text, old_rank, new_rank, new_texts):
-        # A manual drag changes display order only — it does NOT re-run the
-        # prioritization sort. Capture the feedback, then re-render in the
-        # user's chosen order (renumbering + refreshing item data).
+        # BUG: REMEBER TO DEAL WITH THIS FUNCTION CAREFULLY
+
+        # 1. Update visual order
         new_order_dicts = [
             self._text_to_task[t] for t in new_texts if t in self._text_to_task
         ]
         moved = self._text_to_task.get(moved_text)
+
         if moved is None or len(new_order_dicts) != len(new_texts):
-            self._render(self._order)
+            # Safe deferred rendering
+            QTimer.singleShot(0, lambda: self._render(self._order))
             return
 
         moved_title = moved.get("title", "")
-        new_order = [t.get("title", "") for t in new_order_dicts]
-        feedback = record_reorder_feedback(moved_title, old_rank, new_rank, new_order)
-
         self._order = new_order_dicts
-        # Persist the new order so it survives closing/reopening the window.
+
+        # 2. HYBRID ACTION A: Save exact layout to disk
         save_manual_order(self._order)
-        self._render(self._order)
-        self.status_label.setText(
-            f"Reordered '{feedback['moved_title']}': rank "
-            f"{feedback['old_rank']} → {feedback['new_rank']}"
-        )
+
+        # 3. HYBRID ACTION B: Silently train the offline AI Bandit
+        try:
+            ThompsonSampler().record_feedback(moved_title, self._order)
+            self.status_label.setText(
+                f"Reordered '{moved_title}' (AI silently updated!)"
+            )
+        except Exception as e:
+            self.status_label.setText(f"Reordered (AI train failed: {e})")
+
+        # 4. Render safely outside the drop event loop
+        QTimer.singleShot(0, lambda: self._render(self._order))
 
     def _selected(self):
         item = self.tasks_list_widget.currentItem()
@@ -183,24 +199,22 @@ class TasksWindow(QWidget):
         return item.data(Qt.UserRole)
 
     def _on_complete(self):
-        target = self._selected()
-        if target is None:
+        title = self._selected()
+        if title is None:
             return
-        category, title = target
         try:
-            mark_task_completed(category, title)
+            mark_task_completed(task_title=title)  # Removed the category thing
             self.status_label.setText(f"Completed: {title}")
         except ValueError as e:
             self.status_label.setText(str(e))
         self._refresh_list()
 
     def _on_remove(self):
-        target = self._selected()
-        if target is None:
+        title = self._selected()
+        if title is None:
             return
-        category, title = target
         try:
-            remove_tasks(category, title)
+            remove_tasks(task_title=title)
             self.status_label.setText(f"Removed: {title}")
         except ValueError as e:
             self.status_label.setText(str(e))
@@ -218,7 +232,7 @@ class TasksWindow(QWidget):
             return
         try:
             # Category is assigned by the model later; default for now.
-            add_tasks(DEFAULT_CATEGORY, title, deadline)
+            add_tasks(DEFAULT_CATEGORY,title,  deadline)
             self.status_label.setText(f"Added: {title}")
             self.title_input.clear()
             self.deadline_checkbox.setChecked(False)

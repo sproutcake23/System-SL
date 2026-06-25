@@ -393,7 +393,6 @@ class PersonaOnboardingEngine:
                 )
                 return True
             else:
-                self.storage.touch_setup_flag_only()
                 self.ui.display_skip_notification()
                 return False
 
