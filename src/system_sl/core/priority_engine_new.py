@@ -290,13 +290,12 @@ class ContextEngine:
             today_str = datetime.now().strftime("%Y-%m-%d")
 
             count = 0
-            for entries in completed.values():
-                if isinstance(entries, list):
-                    count += sum(
-                        1
-                        for e in entries
-                        if isinstance(e, dict) and e.get("completed_at") == today_str
-                    )
+            if isinstance(completed, list):
+                count += sum(
+                    1
+                    for e in completed
+                    if isinstance(e, dict) and e.get("completed_at") == today_str
+                )
             return count
         except Exception:
             return 0
@@ -509,13 +508,18 @@ class PriorityPipeline:
             return self._empty_result(f"Parse error: {e}")
 
         # Flatten tasks
-        all_tasks = [
-            {**task, "_category": cat}
-            for cat, task_list in tasks_data.items()
-            if isinstance(task_list, list)
-            for task in task_list
-            if isinstance(task, dict)
-        ]
+        # NOTE: changes made such that it can read old data format also
+        if isinstance(tasks_data, list):
+            all_tasks = [t for t in tasks_data if isinstance(t, dict)]
+        else:
+            # for backward_compact
+            all_tasks = [
+                task
+                for task_list in tasks_data.values()
+                if isinstance(task_list, list)
+                for task in task_list
+                if isinstance(task, dict)
+            ]
 
         if not all_tasks:
             return self._empty_result("No tasks found")
@@ -556,14 +560,10 @@ class PriorityPipeline:
 
         # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
 
-        manaul = load_manual_order()
-        if manaul:
-            pos = {(cat, title): i for i, (cat, title) in enumerate(manaul)}
-            scored_tasks.sort(
-                key=lambda t: pos.get(
-                    (t.get("category", ""), t.get("title", "")), len(pos)
-                )
-            )
+        manual = load_manual_order()
+        if manual:
+            pos = {title: i for i, title in enumerate(manual)}
+            scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
 
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
@@ -620,7 +620,6 @@ class PriorityPipeline:
 #
 # NOTE: ADDED TO SAVE THE DRAG ORDER FROM THE USER AND
 def load_manual_order() -> list:
-    """Return the saved manual order as a list of [category, title] pairs."""
     file = Path(Setup()._get_file_path("task_order.json"))
     if file.exists():
         try:
@@ -631,10 +630,10 @@ def load_manual_order() -> list:
     return []
 
 
+# NOTE: Changed and removed the category things
 def save_manual_order(tasks: list) -> None:
-    """Persist the current display order so a manual drag survives restarts."""
     file = Path(Setup()._get_file_path("task_order.json"))
-    order = [[t.get("category", ""), t.get("title", "")] for t in tasks]
+    order = [t.get("title", "") for t in tasks]
     try:
         with open(file, "w") as f:
             json.dump({"order": order}, f)

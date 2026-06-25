@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from PySide6.QtCore import QDate, QSize, Qt, Signal, QTimer
 from system_sl.core.onboarding import ONBOARDING_QUESTIONS, PersonaStorageHandler
 from system_sl.core.tasks import (
     add_tasks,
@@ -154,26 +154,29 @@ class TasksWindow(QWidget):
             item = QListWidgetItem(display)
             # Keep (category, title) so complete/remove still address the right
             # task even though the category is no longer shown.
-            item.setData(Qt.UserRole, (task.get("category", ""), title))
+            # NOTE: removed the category thing
+            item.setData(Qt.UserRole, title)
             self.tasks_list_widget.addItem(item)
             self._text_to_task[display] = task
 
     def _on_reordered(self, moved_text, old_rank, new_rank, new_texts):
-        # BUG: REMEMBER TO HANDLE IT CAREFULLY
+        # BUG: REMEBER TO DEAL WITH THIS FUNCTION CAREFULLY
 
         # 1. Update visual order
         new_order_dicts = [
             self._text_to_task[t] for t in new_texts if t in self._text_to_task
         ]
         moved = self._text_to_task.get(moved_text)
+
         if moved is None or len(new_order_dicts) != len(new_texts):
-            self._render(self._order)
+            # Safe deferred rendering
+            QTimer.singleShot(0, lambda: self._render(self._order))
             return
 
         moved_title = moved.get("title", "")
         self._order = new_order_dicts
 
-        # 2. HYBRID ACTION A: Save exact layout to disk (Immediate Persistence)
+        # 2. HYBRID ACTION A: Save exact layout to disk
         save_manual_order(self._order)
 
         # 3. HYBRID ACTION B: Silently train the offline AI Bandit
@@ -185,8 +188,8 @@ class TasksWindow(QWidget):
         except Exception as e:
             self.status_label.setText(f"Reordered (AI train failed: {e})")
 
-        # 4. Render
-        self._render(self._order)
+        # 4. Render safely outside the drop event loop
+        QTimer.singleShot(0, lambda: self._render(self._order))
 
     def _selected(self):
         item = self.tasks_list_widget.currentItem()
@@ -196,24 +199,22 @@ class TasksWindow(QWidget):
         return item.data(Qt.UserRole)
 
     def _on_complete(self):
-        target = self._selected()
-        if target is None:
+        title = self._selected()
+        if title is None:
             return
-        category, title = target
         try:
-            mark_task_completed(category, title)
+            mark_task_completed(task_title=title)  # Removed the category thing
             self.status_label.setText(f"Completed: {title}")
         except ValueError as e:
             self.status_label.setText(str(e))
         self._refresh_list()
 
     def _on_remove(self):
-        target = self._selected()
-        if target is None:
+        title = self._selected()
+        if title is None:
             return
-        category, title = target
         try:
-            remove_tasks(category, title)
+            remove_tasks(task_title=title)
             self.status_label.setText(f"Removed: {title}")
         except ValueError as e:
             self.status_label.setText(str(e))
@@ -231,7 +232,7 @@ class TasksWindow(QWidget):
             return
         try:
             # Category is assigned by the model later; default for now.
-            add_tasks(DEFAULT_CATEGORY, title, deadline)
+            add_tasks(title, DEFAULT_CATEGORY, deadline)
             self.status_label.setText(f"Added: {title}")
             self.title_input.clear()
             self.deadline_checkbox.setChecked(False)

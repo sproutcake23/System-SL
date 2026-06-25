@@ -1349,6 +1349,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyspellchecker"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/70/58443d052adb868fee9fafb26553d482f2cc4d7c5ed5bb46846a7ce62a01/pyspellchecker-0.9.0.tar.gz", hash = "sha256:eb1a594161c84a4e67df7db1c269a3392a645bd50e4c82e1298892db0cdb0965", size = 7239784, upload-time = "2026-03-07T17:14:53.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/70/df4b8816f5e1aa8b46fbc2b1d104d8f5bc13ec92fb69310b35bc56ea7260/pyspellchecker-0.9.0-py3-none-any.whl", hash = "sha256:97eaed776e0854f69aafb723f6962b403099e50c9a1d9c05525c819f4b0f5d54", size = 7237077, upload-time = "2026-03-07T17:14:51.444Z" },
+]
+
+[[package]]
 name = "python-dotenv"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1641,6 +1650,7 @@ dependencies = [
     { name = "protobuf" },
     { name = "pyinstaller" },
     { name = "pyside6" },
+    { name = "pyspellchecker" },
     { name = "python-dotenv" },
     { name = "qtpy" },
     { name = "spacy" },
@@ -1661,6 +1671,7 @@ requires-dist = [
     { name = "protobuf", specifier = ">=7.35.0" },
     { name = "pyinstaller", specifier = ">=6.20.0" },
     { name = "pyside6" },
+    { name = "pyspellchecker" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "qtpy" },
     { name = "spacy", specifier = ">=3.8.14" },

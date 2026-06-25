@@ -14,13 +14,10 @@ COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
 
 def load_tasks():
-    """Fetches active tasks from storage and automatically processes system migrations for legacy string formats.
-
-    Returns:
-        dict: A dictionary of categorized task objects containing title, created_at, and deadline fields.
-    """
+    """Fetches active tasks from storage and automatically processes system migrations."""
     data = load_data(TASKS_FILE_PATH)
     new_data = []
+
     if isinstance(data, dict):
         migrated = False
         for category, task_list in data.items():
@@ -31,16 +28,19 @@ def load_tasks():
                             "title": task,
                             "created_at": datetime.now().isoformat(),
                             "deadline": None,
-                            "rank": category,
+                            "category": category,  # Updated to use 'category' directly
                         }
                     )
                     migrated = True
                 else:
                     new_data.append(task)
-            data = new_data
 
-        if migrated:
-            save_tasks(new_data)
+        # This MUST be outside the category loop!
+        data = new_data
+
+        # If it was a dict at all, we want to force a save to convert it to a flat list
+        save_tasks(data)
+
     return data
 
 
@@ -96,11 +96,12 @@ def add_tasks(task_title: str, task_type: str = "none", deadline: str = None):
     else:
         task_type = "None"
 
+    # followed sriram's advise to store category if we need in future implemention (happy if one read's this)
     new_task = {
         "title": task_title,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "created_at": datetime.now().isoformat(),
         "deadline": deadline,
-        "rank": task_type,
+        "category": task_type,
     }
 
     tasks.append(new_task)
@@ -190,7 +191,7 @@ def load_completed_tasks():
             data = new_data
 
         if migrated:
-            save_tasks(new_data)
+            save_completed_tasks(new_data)
     return data
 
 
@@ -224,7 +225,8 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
 
     completion_entry = {
         "title": task_title,
-        "Completed": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "category": task_type,
+        "completed_at": datetime.now().strftime("%Y-%m-%d"),
     }
 
     if completion_entry not in completed_tasks:
