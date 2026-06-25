@@ -232,7 +232,7 @@ class TasksWindow(QWidget):
             return
         try:
             # Category is assigned by the model later; default for now.
-            add_tasks(title, DEFAULT_CATEGORY, deadline)
+            add_tasks(DEFAULT_CATEGORY,title,  deadline)
             self.status_label.setText(f"Added: {title}")
             self.title_input.clear()
             self.deadline_checkbox.setChecked(False)

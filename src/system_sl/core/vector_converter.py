@@ -19,6 +19,8 @@ from pathlib import Path
 import logging  # important we will use this for debugging.
 import json
 
+
+from system_sl.core.tasks import load_completed_tasks
 from system_sl.utils import get_tasks_file_path
 
 
@@ -80,7 +82,8 @@ class Setup:
             log.info("spacy en_core_web_md is loaded. ")
             return model
         except OSError:
-            raise RuntimeError("[System Error model is not installed install manaually")
+            raise RuntimeError(
+                "[System Error model is not installed install manaually")
 
     # _nlp = None for lazy loading
 
@@ -176,7 +179,8 @@ class Decay_stradegy:
         self._LAMBDA = (
             math.log(2) / self.DECAY_HALF_LIFE_DAYS
         )  # Remembering old days physical chemistry
-        self._MIN_DECAY_WEIGHT = 0.05  # skip contributions below this (> 86 days old)
+        # skip contributions below this (> 86 days old)
+        self._MIN_DECAY_WEIGHT = 0.05
 
     # def _read_completion_entry(self, entry: dict) -> tuple[str, datetime] | None:
     #     """
@@ -320,7 +324,8 @@ class Decay_stradegy:
 
         decay_vector = raw_mean_vector.astype(np.float32)
 
-        log.info("Decay vector built from %d tasks | weight=%.2f", count, total_weight)
+        log.info("Decay vector built from %d tasks | weight=%.2f",
+                 count, total_weight)
         # 3. Return the raw_norm so the fusion engine can use it
         return decay_vector, count
 
@@ -351,7 +356,8 @@ class Caching:
 
         # Define all file paths ONCE here
         self.persona_path = Path(self.setup._get_file_path("persona.json"))
-        self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
+        self.completed_path = Path(
+            self.setup._get_file_path("completed_tasks.json"))
         self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
 
     def _get_file_mtime(self, path: Path) -> float:
@@ -380,7 +386,8 @@ class Caching:
                 persona_mtime > cache["persona_mtime"]
                 or completed_mtime > cache["completed_mtime"]
             ):
-                log.info("Source files changed — cache invalidated, rebuilding vector")
+                log.info(
+                    "Source files changed — cache invalidated, rebuilding vector")
                 return None
 
             vector = np.array(cache["vector"], dtype=np.float32)
@@ -418,11 +425,11 @@ class Helper:
         # Define all file paths ONCE here
         self.persona_path = Path(self.setup._get_file_path("persona.json"))
         self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
-        self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
+        self.cache_path=Path(self.setup._get_file_path("vector_cache.json"))
 
     def get_vector_info(self) -> dict:
         """Helper to return a human-readable summary of the current vector."""
-        info = {
+        info={
             "persona_exists": self.persona_path.exists(),
             "completed_tasks_exists": self.completed_path.exists(),
             "cache_exists": self.cache_path.exists(),
@@ -435,16 +442,16 @@ class Helper:
         if self.cache_path.exists():
             try:
                 with open(self.cache_path, "r", encoding="utf-8") as f:
-                    cache = json.load(f)
-                info["built_at"] = cache.get("built_at")
+                    cache=json.load(f)
+                info["built_at"]=cache.get("built_at")
             except Exception:
                 pass
 
         if self.persona_path.exists():
             try:
                 with open(self.persona_path, "r", encoding="utf-8") as f:
-                    persona = json.load(f)
-                info["persona_answers"] = [
+                    persona=json.load(f)
+                info["persona_answers"]=[
                     {
                         "category": r["category"],
                         "answer": r["answer"],
@@ -458,13 +465,13 @@ class Helper:
         if self.completed_path.exists():
             try:
                 with open(self.completed_path, "r", encoding="utf-8") as f:
-                    completed = json.load(f)
-                count = len(completed) if isinstance(completed, list) else 0
-                info["completed_task_count"] = count
+                    completed=json.load(f)
+                count=len(completed) if isinstance(completed, list) else 0
+                info["completed_task_count"]=count
 
-                decay_strategy = Decay_stradegy()
-                pw, dw = decay_strategy._build_fusion_weights(count, 1.0)
-                info["fusion_weights"] = {"persona": pw, "decay": dw}
+                decay_strategy=Decay_stradegy()
+                pw, dw=decay_strategy._build_fusion_weights(count, 1.0)
+                info["fusion_weights"]={"persona": pw, "decay": dw}
             except Exception:
                 pass
 
@@ -474,26 +481,28 @@ class Helper:
 class Fusion:
     def __init__(self) -> None:
         # Initialize dependencies ONCE here
-        self.setup = Setup()
+        self.setup=Setup()
 
         # Define all file paths ONCE here
-        self.persona_path = Path(self.setup._get_file_path("persona.json"))
-        self.completed_path = Path(self.setup._get_file_path("completed_tasks.json"))
-        self.cache_path = Path(self.setup._get_file_path("vector_cache.json"))
-        self.cache = Caching()
+        self.persona_path=Path(self.setup._get_file_path("persona.json"))
+        self.completed_path=Path(
+            self.setup._get_file_path("completed_tasks.json"))
+        self.cache_path=Path(self.setup._get_file_path("vector_cache.json"))
+        self.cache=Caching()
 
-    def build_user_vector(self, use_cache: bool = True) -> np.ndarray:
+    def build_user_vector(self, use_cache: bool=True) -> np.ndarray:
         """
         The main orchestrator: Builds or loads the 300-dim user vector.
         Brings together Real_worker and Decay_stradegy.
         """
         if not self.persona_path.exists():
             raise FileNotFoundError(
-                f"persona.json not found at {self.persona_path}. Complete onboarding first."
+                f"persona.json not found at {
+                    self.persona_path}. Complete onboarding first."
             )
 
         if use_cache:
-            cached = self.cache._load_cache()
+            cached=self.cache._load_cache()
             if cached is not None:
                 return cached
 
@@ -501,44 +510,50 @@ class Fusion:
 
         # Load JSONs
         with open(self.persona_path, "r", encoding="utf-8") as f:
-            persona = json.load(f)
+            persona=json.load(f)
 
-        completed_tasks = []  # FIXME: Check we have to tuple or list
+        completed_tasks=[]  # FIXME: Check we have to tuple or list
         if self.completed_path.exists():
-            with open(self.completed_path, "r", encoding="utf-8") as f:
+
                 try:
-                    completed_tasks = json.load(f)
-                except json.JSONDecodeError:
-                    log.warning("completed_tasks.json is malformed — ignoring history")
+                    # completed_tasks=json.load(f)
+                    completed_tasks=load_completed_tasks(self.completed_path)
+
+                except Exception as e:
+                    print(f"Error {e}")
         else:
             log.info("No completed_tasks.json found — using persona only")
 
         # Phase 1: Persona Vector
         log.info("─── Phase 1: Persona Vector ─────────────────────")
-        worker = Real_worker()
-        blob = worker._build_persona_blob(persona)
-        persona_vec = worker._vectorize_blob(blob)
-        log.info("Persona vector built | norm=%.4f", float(np.linalg.norm(persona_vec)))
+        worker=Real_worker()
+        blob=worker._build_persona_blob(persona)
+        persona_vec=worker._vectorize_blob(blob)
+        log.info("Persona vector built | norm=%.4f",
+                 float(np.linalg.norm(persona_vec)))
 
         # Phase 2: Temporal Decay Vector
         log.info("─── Phase 2: Temporal Decay Vector ──────────────")
-        decay_strategy = Decay_stradegy()
-        decay_vec, task_count = decay_strategy._build_decay_vector(completed_tasks)
+        decay_strategy=Decay_stradegy()
+
+        decay_vec, task_count=decay_strategy._build_decay_vector(
+            completed_tasks)
+
 
         # Phase 3: Fusion and Coherence
         log.info("─── Phase 3: Fusion ─────────────────────────────")
 
         # Coherence calculation
         if task_count > 0 and np.linalg.norm(decay_vec) > 0:
-            sim = float(
+            sim=float(
                 np.dot(persona_vec, decay_vec)
                 / (np.linalg.norm(persona_vec) * np.linalg.norm(decay_vec))
             )
-            coherence = max(0.0, sim)
+            coherence=max(0.0, sim)
         else:
-            coherence = 0.0
+            coherence=0.0
 
-        persona_w_adj, decay_w_adj = decay_strategy._build_fusion_weights(
+        persona_w_adj, decay_w_adj=decay_strategy._build_fusion_weights(
             task_count, coherence
         )
 
@@ -550,18 +565,19 @@ class Fusion:
             task_count,
         )
 
-        fused = (persona_w_adj * persona_vec) + (decay_w_adj * decay_vec)
+        fused=(persona_w_adj * persona_vec) + (decay_w_adj * decay_vec)
 
         # L2 Normalise
-        norm = np.linalg.norm(fused)
+        norm=np.linalg.norm(fused)
         if norm > 0:
-            fused = (fused / norm).astype(np.float32)
+            fused=(fused / norm).astype(np.float32)
         else:
             log.error("Fused vector has zero norm — returning zeros.")
-            fused = np.zeros(300, dtype=np.float32)
+            fused=np.zeros(300, dtype=np.float32)
 
         log.info(
-            "Final vector | norm=%.4f (should be ~1.0)", float(np.linalg.norm(fused))
+            "Final vector | norm=%.4f (should be ~1.0)", float(
+                np.linalg.norm(fused))
         )
 
         self.cache._save_cache(fused)
@@ -578,29 +594,34 @@ if __name__ == "__main__":
     print("═" * 60)
 
     try:
-        helper = Helper()
-        fusion_engine = Fusion()
-        info = helper.get_vector_info()
+        helper=Helper()
+        fusion_engine=Fusion()
+        info=helper.get_vector_info()
 
         print(
-            f"\n  Persona file   : {'✓ found' if info['persona_exists'] else '✗ MISSING'}"
+            f"\n  Persona file   : {
+                '✓ found' if info['persona_exists'] else '✗ MISSING'}"
         )
         print(
-            f"  Completed tasks: {'✓ found' if info['completed_tasks_exists'] else '✗ not found'}"
+            f"  Completed tasks: {
+                '✓ found' if info['completed_tasks_exists'] else '✗ not found'}"
         )
-        print(f"  Cache          : {'✓ exists' if info['cache_exists'] else '○ none'}")
+        print(f"  Cache          : {
+              '✓ exists' if info['cache_exists'] else '○ none'}")
         print(f"  Completed count: {info['completed_task_count']}")
         print(
-            f"  Fusion weights : persona={info['fusion_weights']['persona']:.2f}  decay={info['fusion_weights']['decay']:.2f}"
+            f"  Fusion weights : persona={info['fusion_weights']['persona']:.2f}  decay={
+                info['fusion_weights']['decay']:.2f}"
         )
 
         if not info["persona_exists"]:
             print("\n  ✗ Cannot build vector — run onboarding first.")
         else:
             print("\n  Building vector (may take a few seconds on first run)...")
-            vec = fusion_engine.build_user_vector(use_cache=False)
+            vec=fusion_engine.build_user_vector(use_cache=False)
             print(f"\n  Vector shape : {vec.shape}")
-            print(f"  Vector norm  : {np.linalg.norm(vec):.6f}  (should be ~1.0)")
+            print(f"  Vector norm  : {
+                  np.linalg.norm(vec):.6f}  (should be ~1.0)")
             print(f"  Non-zero dims: {np.count_nonzero(vec)}")
             print(f"  Top 5 values : {sorted(vec, reverse=True)[:5]}")
             print("\n  ✓ Vector built successfully.")

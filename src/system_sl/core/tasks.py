@@ -56,7 +56,7 @@ def save_tasks(tasks: dict):
     save_data(TASKS_FILE_PATH, tasks)
 
 
-def add_tasks(task_title: str, task_type: str = "none", deadline: str = None):
+def add_tasks(task_type: str = "none",task_title: str = "none",  deadline: str = None):
     """Registers a new task inside a specific category pool while enforcing validation rules and avoiding duplicates.
 
     Args:
