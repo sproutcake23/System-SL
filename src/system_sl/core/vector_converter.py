@@ -178,52 +178,67 @@ class Decay_stradegy:
         )  # Remembering old days physical chemistry
         self._MIN_DECAY_WEIGHT = 0.05  # skip contributions below this (> 86 days old)
 
+    # def _read_completion_entry(self, entry: dict) -> tuple[str, datetime] | None:
+    #     """
+    #     Read a single completed_tasks.json entry into (title, completion_date).
+    #
+    #     completed_tasks.json entries are structured dicts written by
+    #     mark_task_completed() in tasks.py:
+    #
+    #        {
+    #         "title":        "Implement login endpoint",
+    #         "completed_at": "2025-05-01"
+    #        }
+    #
+    #     Parameters
+    #     ----------
+    #     entry : dict
+    #        A single entry from the completed_tasks.json list.
+    #        Must have "title" (str) and "completed_at" (str "YYYY-MM-DD").
+    #
+    #     Returns
+    #     -------
+    #     tuple (title: str, date: datetime) or None if entry is malformed.
+    #     """
+    #     # FIXME: Change tasks.py mark_task_completed function to correctly write completed.json
+    #     # NOTE: Also make changes in priortization_engine
+    #
+    #     if not isinstance(entry, dict):
+    #         log.debug("Skipping non-dict entry in completed_tasks.json: %r", entry)
+    #         return None
+    #
+    #     title = entry.get("title", "").strip()
+    #     date_str = entry.get("completed_at", "").strip()
+    #
+    #     if not title:
+    #         log.debug("Skipping entry with the empty title: %r", entry)
+    #         return None
+    #
+    #     if not date_str:
+    #         log.debug("Skipping entry with no completed_at date: %r", entry)
+    #         return None
+    #
+    #     try:
+    #         date = datetime.strptime(date_str, "%Y-%m-%d")
+    #         return title, date
+    #
+    #     except ValueError:
+    #         log.debug("Invalid completed_at date %r in entry %r", date_str, entry)
+    #         return None
     def _read_completion_entry(self, entry: dict) -> tuple[str, datetime] | None:
-        """
-        Read a single completed_tasks.json entry into (title, completion_date).
-
-        completed_tasks.json entries are structured dicts written by
-        mark_task_completed() in tasks.py:
-
-           {
-            "title":        "Implement login endpoint",
-            "completed_at": "2025-05-01"
-           }
-
-        Parameters
-        ----------
-        entry : dict
-           A single entry from the completed_tasks.json list.
-           Must have "title" (str) and "completed_at" (str "YYYY-MM-DD").
-
-        Returns
-        -------
-        tuple (title: str, date: datetime) or None if entry is malformed.
-        """
-        # FIXME: Change tasks.py mark_task_completed function to correctly write completed.json
-        # NOTE: Also make changes in priortization_engine
-
         if not isinstance(entry, dict):
-            log.debug("Skipping non-dict entry in completed_tasks.json: %r", entry)
             return None
 
         title = entry.get("title", "").strip()
         date_str = entry.get("completed_at", "").strip()
 
-        if not title:
-            log.debug("Skipping entry with the empty title: %r", entry)
-            return None
-
-        if not date_str:
-            log.debug("Skipping entry with no completed_at date: %r", entry)
+        if not title or not date_str:
             return None
 
         try:
             date = datetime.strptime(date_str, "%Y-%m-%d")
             return title, date
-
         except ValueError:
-            log.debug("Invalid completed_at date %r in entry %r", date_str, entry)
             return None
 
     def _compute_decay_weight(self, completion_date: datetime) -> float:

@@ -252,7 +252,7 @@ class ContextEngine:
 
     def __init__(self):
         self.setup = Setup()
-        self.completed_file = self.setup._get_file_path("completed_tasks.json")
+        self.completed_file = Path(self.setup._get_file_path("completed_tasks.json"))
         self.analyzer = TaskAnalyzer()
 
     def detect_context(self, all_tasks: List[dict]) -> str:
@@ -290,13 +290,12 @@ class ContextEngine:
             today_str = datetime.now().strftime("%Y-%m-%d")
 
             count = 0
-            for entries in completed.values():
-                if isinstance(entries, list):
-                    count += sum(
-                        1
-                        for e in entries
-                        if isinstance(e, dict) and e.get("completed_at") == today_str
-                    )
+            if isinstance(completed, list):
+                count += sum(
+                    1
+                    for e in completed
+                    if isinstance(e, dict) and e.get("completed_at") == today_str
+                )
             return count
         except Exception:
             return 0
@@ -331,7 +330,7 @@ class ThompsonSampler(BaseWeightOptimizer):
 
     def __init__(self):
         self.setup = Setup()
-        self.state_file = self.setup._get_file_path("bandit_state.json")
+        self.state_file = Path(self.setup._get_file_path("bandit_state.json"))
         self.state = self._load_state()
 
     def _load_state(self) -> dict:
@@ -474,8 +473,8 @@ class PriorityPipeline:
 
     def __init__(self, use_thompson_sampling: bool = True):
         self.setup = Setup()
-        self.tasks_file = self.setup._get_file_path("tasks.json")
-        self.output_file = self.setup._get_file_path("prioritize.json")
+        self.tasks_file = Path(self.setup._get_file_path("tasks.json"))
+        self.output_file = Path(self.setup._get_file_path("prioritize.json"))
 
         self.context_engine = ContextEngine()
 
@@ -509,13 +508,18 @@ class PriorityPipeline:
             return self._empty_result(f"Parse error: {e}")
 
         # Flatten tasks
-        all_tasks = [
-            {**task, "_category": cat}
-            for cat, task_list in tasks_data.items()
-            if isinstance(task_list, list)
-            for task in task_list
-            if isinstance(task, dict)
-        ]
+        # NOTE: changes made such that it can read old data format also
+        if isinstance(tasks_data, list):
+            all_tasks = [t for t in tasks_data if isinstance(t, dict)]
+        else:
+            # for backward_compact
+            all_tasks = [
+                task
+                for task_list in tasks_data.values()
+                if isinstance(task_list, list)
+                for task in task_list
+                if isinstance(task, dict)
+            ]
 
         if not all_tasks:
             return self._empty_result("No tasks found")
@@ -553,6 +557,14 @@ class PriorityPipeline:
 
         # Sort & Map
         scored_tasks.sort(key=lambda t: t["P_final"], reverse=True)
+
+        # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
+
+        manual = load_manual_order()
+        if manual:
+            pos = {title: i for i, title in enumerate(manual)}
+            scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
+
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
             q = self._assign_quadrant(task)
@@ -605,9 +617,31 @@ class PriorityPipeline:
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 6 — PUBLIC API & CLI
 # ══════════════════════════════════════════════════════════════════════════════
+#
+# NOTE: ADDED TO SAVE THE DRAG ORDER FROM THE USER AND
+def load_manual_order() -> list:
+    file = Path(Setup()._get_file_path("task_order.json"))
+    if file.exists():
+        try:
+            with open(file, "r") as f:
+                return json.load(f).get("order", [])
+        except Exception:
+            pass
+    return []
 
 
-def run_prioritization(display: bool = True, use_thompson: bool = True) -> dict:
+# NOTE: Changed and removed the category things
+def save_manual_order(tasks: list) -> None:
+    file = Path(Setup()._get_file_path("task_order.json"))
+    order = [t.get("title", "") for t in tasks]
+    try:
+        with open(file, "w") as f:
+            json.dump({"order": order}, f)
+    except Exception:
+        pass
+
+
+def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict:
     """Main application entry point."""
     try:
         # Prevent spacy overhead unless actually running
@@ -655,4 +689,4 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"✗ Error updating bandit: {e}")
     else:
-        run_prioritization()
+        run_prioritization(use_thompson=False)  # FIXME: ThompsonSampling not working
