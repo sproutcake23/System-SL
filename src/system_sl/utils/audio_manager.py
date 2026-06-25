@@ -46,18 +46,18 @@ def play_sound(file_path: str):
 def check_audio_duration(file_path: str) -> int:
     player = _get_player()
     player.setSource(QUrl.fromLocalFile(file_path))
-    
+
     # Wait for the file to load so we can get the duration
     loop = QEventLoop()
     def on_status_changed(status):
         if status in (QMediaPlayer.MediaStatus.LoadedMedia, QMediaPlayer.MediaStatus.InvalidMedia):
             loop.quit()
-            
+
     player.mediaStatusChanged.connect(on_status_changed)
-    QTimer.singleShot(1500, loop.quit) 
+    QTimer.singleShot(1500, loop.quit)
     loop.exec()
     player.mediaStatusChanged.disconnect(on_status_changed)
-    
+
     return player.duration()
 
 def set_sound_setting(file_path: str):

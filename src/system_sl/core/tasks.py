@@ -10,12 +10,13 @@ from system_sl.utils import load_data, save_data
 
 
 TASKS_FILE_PATH = get_tasks_file_path("tasks.json")
+TASK_ORDER_FILE_PATH = get_tasks_file_path("task_order.json")
 COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
 
-def load_tasks():
+def load_tasks(file_path):
     """Fetches active tasks from storage and automatically processes system migrations."""
-    data = load_data(TASKS_FILE_PATH)
+    data = load_data(file_path)
     new_data = []
 
     if isinstance(data, dict):
@@ -44,7 +45,7 @@ def load_tasks():
     return data
 
 
-def save_tasks(tasks: dict):
+def save_tasks(tasks: dict|list):
     """Persists active tasks directly to the main tracking database file.
 
     Args:
@@ -73,7 +74,7 @@ def add_tasks(task_type: str = "none",task_title: str = "none",  deadline: str =
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
-    tasks = load_tasks()
+    tasks = load_tasks(TASKS_FILE_PATH)
 
     task_title = task_title.strip()
 
@@ -122,7 +123,7 @@ def remove_tasks(task_title: str, task_type: str = "none"):
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
-    tasks = load_tasks()
+    tasks = load_tasks(TASKS_FILE_PATH)
     task_type = task_type.lower().strip()
     task_title = task_title.strip()
 
@@ -149,7 +150,7 @@ def get_random_task():
     Returns:
         tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
     """
-    tasks = load_tasks()
+    tasks = load_tasks(TASKS_FILE_PATH)
     # non_empty_cat = {k: v for k, v in tasks.items() if v}
     # if not non_empty_cat:
     #     return None
@@ -157,6 +158,21 @@ def get_random_task():
     rand_task_obj = random.choice(tasks)
 
     return rand_task_obj["title"]
+
+def get_topn_task():
+    """Picks an outstanding item completely at random across all non-empty active categories.
+
+    Returns:
+        tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
+    """
+    tasks = load_data(TASK_ORDER_FILE_PATH)
+    tasks = tasks['order']
+    if len(tasks) >= 3:
+        task = tasks[:3]
+    else:
+        task = tasks
+
+    return task
 
 
 def load_completed_tasks():
@@ -237,4 +253,4 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
 
 
 if __name__ == "__main__":
-    print(mark_task_completed("Neggggg"))
+    print(type(get_topn_task()))
