@@ -18,8 +18,80 @@ from typing import Any, Dict, List, Optional
 
 
 # =====================================================================
+# 0. SHARED CONFIGURATION (single source of truth for both frontends)
+# =====================================================================
+
+# The onboarding questionnaire. Shared by the CLI flow
+# (PersonaOnboardingEngine) and the GUI flow (OnboardingWindow) so the two
+# never drift apart.
+ONBOARDING_QUESTIONS: List[Dict[str, Any]] = [
+    {
+        "id": 1,
+        "category": "IDENTITY",
+        "question": "What is your ultimate career or life ambition?",
+        "hint": "e.g., Senior AI Engineer, Product Manager, Startup Founder",
+    },
+    {
+        "id": 2,
+        "category": "ACADEMIC",
+        "question": "What subjects or fields are you studying/interested in?",
+        "hint": "e.g., Computer Science, Mathematics, Data Science",
+    },
+    {
+        "id": 3,
+        "category": "SKILLS",
+        "question": "What technical skills, tools, or languages are you focusing on?",
+        "hint": "e.g., Python, Docker, React, AWS, TensorFlow",
+    },
+    {
+        "id": 4,
+        "category": "ACTIONS",
+        "question": "What actions do you want to spend most of your time doing?",
+        "hint": "e.g., Coding, designing, writing, researching",
+    },
+    {
+        "id": 5,
+        "category": "PROJECTS",
+        "question": "What kind of projects do you love building?",
+        "hint": "e.g., Web apps, ML models, APIs, mobile apps",
+    },
+    {
+        "id": 6,
+        "category": "MILESTONE",
+        "question": "What is your main objective for the next 3-6 months?",
+        "hint": "e.g., Land internship, build portfolio, launch product",
+    },
+    {
+        "id": 7,
+        "category": "COGNITION",
+        "question": "What types of problems do you enjoy solving most?",
+        "hint": "e.g., Algorithms, system design, optimization",
+    },
+    {
+        "id": 8,
+        "category": "HABITS",
+        "question": "What daily habits are essential to your growth?",
+        "hint": "e.g., Reading, gym, meditation, learning",
+    },
+    {
+        "id": 9,
+        "category": "INDUSTRY",
+        "question": "Which industries do you want your work to impact?",
+        "hint": "e.g., AI, FinTech, Healthcare, Climate Tech",
+    },
+    {
+        "id": 10,
+        "category": "VALUES",
+        "question": "What keywords describe your core professional values?",
+        "hint": "e.g., Efficient, innovative, scalable, quality",
+    },
+]
+
+
+# =====================================================================
 # 1. STORAGE LAYER (Single Responsibility: File System I/O)
 # =====================================================================
+
 
 class PersonaStorageHandler:
     """Manages the storage lifecycle, tracking flags, and serialization of user persona data."""
@@ -31,7 +103,9 @@ class PersonaStorageHandler:
             application_name (str): Directory name where configurations are cached. Defaults to "system-sl".
         """
         if os.name == "nt":
-            base_dir: Path = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+            base_dir: Path = Path(
+                os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")
+            )
             self.data_dir: Path = base_dir / application_name
         else:
             self.data_dir: Path = Path.home() / ".config" / application_name
@@ -51,7 +125,9 @@ class PersonaStorageHandler:
         """Ensures the application data directories are physically allocated on disk."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    def write_persona_profile(self, responses: List[Dict[str, Any]], statistics: Dict[str, int]) -> None:
+    def write_persona_profile(
+        self, responses: List[Dict[str, Any]], statistics: Dict[str, int]
+    ) -> None:
         """Serializes player profiles and saves them as a structured JSON file.
 
         Args:
@@ -83,6 +159,7 @@ class PersonaStorageHandler:
 # 2. USER INTERFACE LAYER (Single Responsibility: Terminal UI & Validations)
 # =====================================================================
 
+
 class SoloLevelingConsoleUI:
     """Handles terminal layouts, interactive prompt parsing, and input constraints with an RPG flavor."""
 
@@ -103,14 +180,17 @@ class SoloLevelingConsoleUI:
     
     📋 The SYSTEM will ask you 10 questions to build your Player Profile.
        This profile will help prioritize quests aligned with YOUR goals.
-    
     ⏱️  Time Required: 3-5 minutes
     💡 Answer with KEYWORDS, not sentences
     ⚡ Rate each answer's IMPACT on your journey (1-3)
         """)
         print("═" * 70)
 
-        response: str = input("\n🎮 Ready to begin character creation? (yes/skip): ").strip().lower()
+        response: str = (
+            input("\n🎮 Ready to begin character creation? (yes/skip): ")
+            .strip()
+            .lower()
+        )
         return response not in ["skip", "s", "n", "no"]
 
     def display_question_card(self, question_metadata: Dict[str, Any]) -> None:
@@ -120,7 +200,9 @@ class SoloLevelingConsoleUI:
             question_metadata (Dict[str, Any]): Map describing ID, category, problem string, and input helper context.
         """
         print(f"\n{'─' * 70}")
-        print(f"⚔️  QUEST {question_metadata['id']}/10 - {question_metadata['category']}")
+        print(
+            f"⚔️  QUEST {question_metadata['id']}/10 - {question_metadata['category']}"
+        )
         print(f"{'─' * 70}")
         print(f"\n❓ {question_metadata['question']}")
         print(f"💡 Example: {question_metadata['hint']}")
@@ -182,7 +264,13 @@ class SoloLevelingConsoleUI:
         bar: str = "█" * filled + "░" * (20 - filled)
         print(f"\n📊 Profile Completion: [{bar}] {progress:.0f}%")
 
-    def display_completion_screen(self, high_priority_count: int, medium_priority_count: int, low_priority_count: int, target_file_path: Path) -> None:
+    def display_completion_screen(
+        self,
+        high_priority_count: int,
+        medium_priority_count: int,
+        low_priority_count: int,
+        target_file_path: Path,
+    ) -> None:
         """Displays finalized classification statistics along with target persistence addresses.
 
         Args:
@@ -233,10 +321,15 @@ class SoloLevelingConsoleUI:
 # 3. CORE SERVICE ORCHESTRATION LAYER (Single Responsibility: Workflow Control)
 # =====================================================================
 
+
 class PersonaOnboardingEngine:
     """Orchestrates configuration data paths combining interfaces for UI views and persistence layers."""
 
-    def __init__(self, storage_handler: Optional[PersonaStorageHandler] = None, user_interface: Optional[SoloLevelingConsoleUI] = None) -> None:
+    def __init__(
+        self,
+        storage_handler: Optional[PersonaStorageHandler] = None,
+        user_interface: Optional[SoloLevelingConsoleUI] = None,
+    ) -> None:
         """Links interface dependencies tracking user preferences and data management.
 
         Args:
@@ -245,19 +338,8 @@ class PersonaOnboardingEngine:
         """
         self.storage: PersonaStorageHandler = storage_handler or PersonaStorageHandler()
         self.ui: SoloLevelingConsoleUI = user_interface or SoloLevelingConsoleUI()
-        
-        self.questions: List[Dict[str, Any]] = [
-            {"id": 1, "category": "IDENTITY", "question": "What is your ultimate career or life ambition?", "hint": "e.g., Senior AI Engineer, Product Manager, Startup Founder"},
-            {"id": 2, "category": "ACADEMIC", "question": "What subjects or fields are you studying/interested in?", "hint": "e.g., Computer Science, Mathematics, Data Science"},
-            {"id": 3, "category": "SKILLS", "question": "What technical skills, tools, or languages are you focusing on?", "hint": "e.g., Python, Docker, React, AWS, TensorFlow"},
-            {"id": 4, "category": "ACTIONS", "question": "What actions do you want to spend most of your time doing?", "hint": "e.g., Coding, designing, writing, researching"},
-            {"id": 5, "category": "PROJECTS", "question": "What kind of projects do you love building?", "hint": "e.g., Web apps, ML models, APIs, mobile apps"},
-            {"id": 6, "category": "MILESTONE", "question": "What is your main objective for the next 3-6 months?", "hint": "e.g., Land internship, build portfolio, launch product"},
-            {"id": 7, "category": "COGNITION", "question": "What types of problems do you enjoy solving most?", "hint": "e.g., Algorithms, system design, optimization"},
-            {"id": 8, "category": "HABITS", "question": "What daily habits are essential to your growth?", "hint": "e.g., Reading, gym, meditation, learning"},
-            {"id": 9, "category": "INDUSTRY", "question": "Which industries do you want your work to impact?", "hint": "e.g., AI, FinTech, Healthcare, Climate Tech"},
-            {"id": 10, "category": "VALUES", "question": "What keywords describe your core professional values?", "hint": "e.g., Efficient, innovative, scalable, quality"},
-        ]
+
+        self.questions: List[Dict[str, Any]] = ONBOARDING_QUESTIONS
         self.responses: List[Dict[str, Any]] = []
 
     def run_questionnaire(self) -> None:
@@ -268,13 +350,15 @@ class PersonaOnboardingEngine:
             answer: str = self.ui.read_valid_answer()
             impact: int = self.ui.read_valid_impact_rating()
 
-            self.responses.append({
-                "question_id": question["id"],
-                "category": question["category"],
-                "question": question["question"],
-                "answer": answer,
-                "impact": impact,
-            })
+            self.responses.append(
+                {
+                    "question_id": question["id"],
+                    "category": question["category"],
+                    "question": question["question"],
+                    "answer": answer,
+                    "impact": impact,
+                }
+            )
             self.ui.render_progress_bar(question["id"], len(self.questions))
 
     def save_current_profile(self) -> Dict[str, int]:
@@ -305,7 +389,7 @@ class PersonaOnboardingEngine:
                     high_priority_count=stats["high_count"],
                     medium_priority_count=stats["medium_count"],
                     low_priority_count=stats["low_count"],
-                    target_file_path=self.storage.persona_file
+                    target_file_path=self.storage.persona_file,
                 )
                 return True
             else:
@@ -326,6 +410,7 @@ class PersonaOnboardingEngine:
 # =====================================================================
 # 4. COMPONENT ENTRY POINTS (Interface Layer Helpers)
 # =====================================================================
+
 
 def check_and_run_onboarding() -> bool:
     """Verifies baseline directory status launching workflows conditionally.
@@ -349,5 +434,6 @@ def force_run_setup() -> bool:
     if not engine.storage.is_first_time():
         if not engine.ui.prompt_profile_recreation():
             return False
-            
+
     return engine.execute_workflow()
+
