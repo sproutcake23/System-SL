@@ -36,7 +36,7 @@ def load_data(filepath: str) -> dict:
         return {}
 
 
-def save_data(filepath: str, data: dict) -> None:
+def save_data(filepath: str, data: dict|list) -> None:
     """Serializes and saves a dictionary structure directly into a target JSON file.
 
     Args:

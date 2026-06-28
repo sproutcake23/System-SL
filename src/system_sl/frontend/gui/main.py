@@ -93,8 +93,6 @@ class MainWindow(QMainWindow):
             engine = GoogleSyncEngine()
             engine.execute_sync(CalendarProvider(engine.client))
             engine.execute_sync(TasksProvider(engine.client))
-            # sync_calendar_events()
-            # sync_google_tasks()
         except Exception as e:
             message_box.setWindowTitle("Error")
             message_box.setText(str(e))
@@ -120,15 +118,16 @@ def main():
     app = QApplication(sys.argv)
     app.setStyleSheet(SOLO_LEVELING_QSS)
 
-    # Background notifier mode: the autostart systemd unit launches the app with
-    # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
-    # menu. Opening the menu here would make the always-restarting service
-    # reopen it every time it was closed.
     if "--bg" in sys.argv:
         view = SystemNotification()
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
         sys.exit(app.exec())
+    # Background notifier mode: the autostart systemd unit launches the app with
+    # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
+    # menu. Opening the menu here would make the always-restarting service
+    # reopen it every time it was closed.
+
 
     env_path = Path(get_tasks_file_path(".env"))
     if env_path.exists():
@@ -170,6 +169,9 @@ def main():
         else:
             main_window = MainWindow()
             main_window.show()
+
+
+
     except Exception:
         import traceback
 

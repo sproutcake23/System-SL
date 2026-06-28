@@ -51,15 +51,12 @@ class SystemNotification(QWidget):
         header_layout.addStretch()
 
         self.content_area = QFrame()
-        content_layout = QVBoxLayout(self.content_area)
-        self.cat_label = QLabel("[ CATEGORY ]")
-        self.cat_label.setObjectName("notifCategory")
-        self.msg_label = QLabel("Loading task...")
-        self.msg_label.setObjectName("notifMessage")
+        self.content_layout = QVBoxLayout(self.content_area)
+        # self.cat_label = QLabel("[ CATEGORY ]")
+        # self.cat_label.setObjectName("notifCategory")
 
-        for lbl in [self.cat_label, self.msg_label]:
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            content_layout.addWidget(lbl)
+        self.msg_labels = []
+
 
         self.dismiss_btn = QPushButton("DISMISS")
         self.dismiss_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -78,9 +75,23 @@ class SystemNotification(QWidget):
 
         self.main_layout.addWidget(self.container)
 
-    def display_message(self, category: str, message: str) -> None:
-        self.cat_label.setText(f"[ {category.upper()} ]")
-        self.msg_label.setText(message)
+    def display_message(self,message: list) -> None:
+        while self.content_layout.count():
+            item = self.content_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        text = "Loading task"
+
+        for i in range(len(message)):
+            label = QLabel(f"{text}{i}")
+            label.setObjectName("notifMessage")  # Keeps your QSS styling consistent
+
+            self.content_layout.addWidget(label)  # Assuming self.layout is your QVBoxLayout
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+            label.setText(message[i])
+
         current_sound = get_current_sound()
         play_sound(current_sound)
         self.show_system_style()
