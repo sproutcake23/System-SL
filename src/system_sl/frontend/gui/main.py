@@ -28,7 +28,7 @@ from system_sl.utils.audio_manager import (
     set_sound_setting,
     DEFAULT_SOUNDS_DIR,
 )
-
+from system_sl.core.priority_engine_new import run_prioritization
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -71,6 +71,8 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(left_widget, stretch=1)
         layout.addWidget(self.chat_panel, stretch=3)
+
+
 
     def open_tasks_window(self):
         if self.tasks_window is None:
@@ -115,6 +117,7 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    run_prioritization(display=False)
     app = QApplication(sys.argv)
     app.setStyleSheet(SOLO_LEVELING_QSS)
 

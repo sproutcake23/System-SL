@@ -14,9 +14,9 @@ TASK_ORDER_FILE_PATH = get_tasks_file_path("task_order.json")
 COMPLETED_TASKS_FILE_PATH = get_tasks_file_path("completed_tasks.json")
 
 
-def load_tasks(file_path):
+def load_tasks():
     """Fetches active tasks from storage and automatically processes system migrations."""
-    data = load_data(file_path)
+    data = load_data(TASKS_FILE_PATH)
     new_data = []
 
     if isinstance(data, dict):
@@ -74,7 +74,7 @@ def add_tasks(task_type: str = "none",task_title: str = "none",  deadline: str =
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
-    tasks = load_tasks(TASKS_FILE_PATH)
+    tasks = load_tasks()
 
     task_title = task_title.strip()
 
@@ -123,7 +123,7 @@ def remove_tasks(task_title: str, task_type: str = "none"):
     if not isinstance(task_title, str) or not task_title.strip():
         raise ValueError("Task title must be a non-empty string")
 
-    tasks = load_tasks(TASKS_FILE_PATH)
+    tasks = load_tasks()
     task_type = task_type.lower().strip()
     task_title = task_title.strip()
 
@@ -150,7 +150,7 @@ def get_random_task():
     Returns:
         tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
     """
-    tasks = load_tasks(TASKS_FILE_PATH)
+    tasks = load_tasks()
     # non_empty_cat = {k: v for k, v in tasks.items() if v}
     # if not non_empty_cat:
     #     return None
@@ -197,16 +197,15 @@ def load_completed_tasks():
                         {
                             "title": task,
                             "created_at": datetime.now().isoformat(),
-                            "deadline": None,
-                            "rank": category,
+                            "category": category,
                         }
                     )
                     migrated = True
                 else:
                     new_data.append(task)
-            data = new_data
-
+            
         if migrated:
+            data = new_data
             save_completed_tasks(new_data)
     return data
 
@@ -240,11 +239,11 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
     #     completed_tasks[task_type] = []
 
     completion_entry = {
-        "title": task_title,
-        "category": task_type,
+        "title": task_title, 
         "completed_at": datetime.now().strftime("%Y-%m-%d"),
+        "category": task_type,
     }
-
+    print(type(completed_tasks))
     if completion_entry not in completed_tasks:
         completed_tasks.append(completion_entry)
 
@@ -253,4 +252,4 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
 
 
 if __name__ == "__main__":
-    print(type(get_topn_task()))
+    print(load_completed_tasks())

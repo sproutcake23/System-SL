@@ -537,6 +537,7 @@ class PriorityPipeline:
             scores = self.gravity_engine.score_task(
                 task, user_vector, ctx_str, ctx_profile
             )
+
             scored_tasks.append(
                 {
                     "title": task.get("title", "untitled"),
@@ -564,13 +565,14 @@ class PriorityPipeline:
         if manual:
             pos = {title: i for i, title in enumerate(manual)}
             scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
-
+        task_title = []
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
+            task_title.append(task)
             q = self._assign_quadrant(task)
             task["quadrant"] = q
             quadrants[q].append(task)
-
+        save_manual_order(task_title)
         # Output payload
         output = {
             "generated_at": datetime.now().isoformat(),
@@ -630,7 +632,7 @@ def load_manual_order() -> list:
     return []
 
 
-# NOTE: Changed and removed the category things
+# NOTE: Changed and removed the category thing
 def save_manual_order(tasks: list) -> None:
     file = Path(Setup()._get_file_path("task_order.json"))
     order = [t.get("title", "") for t in tasks]

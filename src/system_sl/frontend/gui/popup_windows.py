@@ -239,7 +239,7 @@ class TasksWindow(QWidget):
             self.deadline_edit.setDate(QDate.currentDate())
         except ValueError as e:
             self.status_label.setText(str(e))
-        self._refresh_list(https://unstop.com/o/e5h76cr?lb=useKzR1r&utm_medium=Share&utm_source=internships&utm_campaign=Sriram20392)
+        self._refresh_list()
 
 
 class OnboardingWindow(QWidget):
