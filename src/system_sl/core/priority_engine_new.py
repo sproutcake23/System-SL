@@ -141,6 +141,7 @@ class TaskAnalyzer:
 
     def parse_deadline(self, deadline_str: Optional[str]) -> Optional[datetime]:
         """Robustly parse any deadline format into a datetime object."""
+        # BUG: Check it works for google calender api fetch or not
         if not deadline_str:
             return None
 
@@ -214,9 +215,9 @@ class TaskAnalyzer:
         created_dt = self.parse_deadline(created_str) or now
         days_since = max(0, (now - created_dt).days)
 
-        natural_window = 14 + (W * 46)
+        natural_window = 3 + (W * 2)  # natural window for the non deadline task is 5.
         D = natural_window - days_since
-        return max(1.0, D)
+        return max(0.0, D)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -225,9 +226,7 @@ class TaskAnalyzer:
 
 
 class ContextEngine:
-    """tries toDetects user's state to shift the manupluate the claculated W, I AND Dmultipliers.
-    REMEMBER : IF u want ur growth oreinted and work's for goal try not to add tasks which u will not do if deadline is near this is current limitation
-    """
+    """tries toDetects user's state to shift the manupluate the claculated W, I AND Dmultipliers."""
 
     PROFILES = {
         "PRESSURE": {
@@ -257,7 +256,7 @@ class ContextEngine:
 
     def detect_context(self, all_tasks: List[dict]) -> str:
         now = datetime.now()
-        due_48h, overdue = 0, 0
+        due_24h, overdue = 0, 0
 
         for task in all_tasks:
             dl = self.analyzer.parse_deadline(task.get("deadline"))
@@ -265,12 +264,12 @@ class ContextEngine:
                 continue
 
             delta_days = (dl - now).total_seconds() / 86400
-            if delta_days <= 2:
-                due_48h += 1
+            if delta_days <= 1:  # changes to 1
+                due_24h += 1
             if dl < now:
                 overdue += 1
 
-        if due_48h >= 2:
+        if due_24h >= 2:
             return "PRESSURE"
         if overdue >= 3:
             return "RECOVERY"
@@ -537,6 +536,7 @@ class PriorityPipeline:
             scores = self.gravity_engine.score_task(
                 task, user_vector, ctx_str, ctx_profile
             )
+
             scored_tasks.append(
                 {
                     "title": task.get("title", "untitled"),
@@ -564,13 +564,14 @@ class PriorityPipeline:
         if manual:
             pos = {title: i for i, title in enumerate(manual)}
             scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
-
+        task_title = []
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
+            task_title.append(task)
             q = self._assign_quadrant(task)
             task["quadrant"] = q
             quadrants[q].append(task)
-
+        save_manual_order(task_title)
         # Output payload
         output = {
             "generated_at": datetime.now().isoformat(),
@@ -630,7 +631,7 @@ def load_manual_order() -> list:
     return []
 
 
-# NOTE: Changed and removed the category things
+# NOTE: Changed and removed the category thing
 def save_manual_order(tasks: list) -> None:
     file = Path(Setup()._get_file_path("task_order.json"))
     order = [t.get("title", "") for t in tasks]

@@ -37,8 +37,14 @@ def load_tasks() -> Any:
         None
 
     Returns:
-        Any: A structure containing all open tasks where each task contains a title,
-             created_at timestamp, and an optional deadline.
+        Any: A list with group of dictionaries with keys title, created_at, deadliine, rank.
+        Eg:
+        [{
+        "title": "hello dude",
+        "created_at": "2026-06-21T00:06:25.754970",
+        "deadline": null,
+        "category": "general"
+        },]
     """
     # Placeholder for your core loading function
     return core_load_tasks()
@@ -51,14 +57,20 @@ def load_completed_tasks() -> Any:
     Return the user's historical completed tasks, grouped by category.
 
     When to use:
-    Use this tool when the user asks about their achievements, past completed tasks,
+    Use this tool when the user asks about their achievements, completed tasks,
     or historical records of what they have successfully finished.
 
     Args:
         None
 
     Returns:
-        Any: A dictionary grouped by category containing strings like 'title (Completed: YYYY-MM-DD)'.
+        Any: A list with group of dictionaries with keys title, created_at, deadliine, rank.
+        Eg:
+        [{
+        "title": "hello dude",
+        "created_at": "2026-06-21T00:06:25.754970",
+        "category": "general"
+        },]
     """
     return core_load_completed_tasks()
     pass
@@ -91,7 +103,7 @@ def add_task(category: str, title: str, deadline: Optional[str] = None) -> Any:
 
 
 @tool
-def remove_task(category: str, title: str) -> Any:
+def remove_task(title: str, category: str) -> Any:
     """
     Remove/delete a specific task from a targeted category completely.
 
@@ -100,21 +112,22 @@ def remove_task(category: str, title: str) -> Any:
     an existing task without completing it.
 
     Args:
-        category (str): The category name where the task resides.
         title (str): The exact title text of the task to be removed.
+        category (str): The category name where the task resides.
+
 
     Returns:
         Any: The string title on a successful deletion, or a dictionary with
              an error key if the task wasn't found (e.g., {"error": "not_found"}).
     """
     try:
-        return remove_tasks(category, title)
+        return remove_tasks(title,category)
     except ValueError as e:
         return {"error": "not_found", "message": str(e)}
 
 
 @tool
-def mark_task_completed(category: str, title: str) -> Any:
+def mark_task_completed(title: str, category: str) -> Any:
     """
     Move a task from the open status to the completed status pool.
 
@@ -123,15 +136,16 @@ def mark_task_completed(category: str, title: str) -> Any:
     cleared, or successfully executed a specific task objective.
 
     Args:
-        category (str): The category name where the task resides.
         title (str): The exact title text of the task to mark complete.
+        category (str): The category name where the task resides.
+
 
     Returns:
         Any: The string title on a successful completion change, or a dictionary
              with an error key if the task doesn't exist (e.g., {"error": "not_found"}).
     """
     try:
-        return core_mark_task_completed(category, title)
+        return core_mark_task_completed(title, category)
     except ValueError as e:
         return {"error": "not_found", "message": str(e)}
 
@@ -211,7 +225,7 @@ def get_llm() -> ChatGoogleGenerativeAI:
     already present in the environment by the time pydantic validates it.
     """
     return ChatGoogleGenerativeAI(
-        model="models/gemma-4-31b-it",
+        model="gemini-3.1-flash-lite",
         temperature=0,
     )
 
