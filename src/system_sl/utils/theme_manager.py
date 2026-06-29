@@ -17,20 +17,31 @@ def get_wallpaper_path():
             return "Error: Wallpaper registry key not found."
         except Exception as e:
             return f"Error reading registry: {e}"
-
+    elif system_name == "darwin":  # macOS support added
+        try:
+            script = 'tell application "System Events" to tell every desktop to get picture'
+            result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True)
+            return result.stdout.strip()
+        except Exception as e:
+            return f"Error running osascript: {e}"
+        
     elif system_name == "linux":
         desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
         
         if "gnome" in desktop or "unity" in desktop:
-            # GNOME uses a binary dconf database, so we still must call the `gsettings` API.
-            # However, we execute it directly (no shell) and handle string parsing natively in Python.
             try:
+                # Check if system is using dark mode
+                theme_req = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                    capture_output=True, text=True
+                )
+                uri_key = "picture-uri-dark" if "prefer-dark" in theme_req.stdout else "picture-uri"
+
                 result = subprocess.run(
-                    ["gsettings", "get", "org.gnome.desktop.background", "picture-uri-dark"],
+                    ["gsettings", "get", "org.gnome.desktop.background", uri_key],
                     capture_output=True, text=True, check=True
                 )
                 path = result.stdout.strip()
-                # Remove surrounding quotes and file:// prefix
                 path = path.strip("'").replace("file://", "")
                 return path if path else "No active GNOME wallpaper found."
             except FileNotFoundError:
@@ -63,11 +74,11 @@ def get_wallpaper_path():
             try:
                 with open(config_path, "r") as f:
                     for line in f:
-                        if "image_path" in line:
+                        if "source: Path(" in line:
                             # Extract path between quotes: "image_path": "/path/to/image"
                             parts = line.split('"')
-                            if len(parts) >= 4:
-                                return parts[3]
+                            if len(parts) >= 2:
+                                return parts[1]
             except Exception as e:
                 return f"Error reading COSMIC config: {e}"
             return "No active COSMIC wallpaper found in config."
