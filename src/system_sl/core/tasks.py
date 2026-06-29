@@ -187,8 +187,9 @@ def load_completed_tasks():
         dict: A dictionary of categorized task objects containing title, created_at, and deadline fields.
     """
     data = load_data(COMPLETED_TASKS_FILE_PATH)
-    new_data = []
+
     if isinstance(data, dict):
+        new_data = []
         migrated = False
         for category, task_list in data.items():
             for task in task_list:
@@ -203,9 +204,8 @@ def load_completed_tasks():
                     migrated = True
                 else:
                     new_data.append(task)
-            
+        data = new_data       
         if migrated:
-            data = new_data
             save_completed_tasks(new_data)
     return data
 
