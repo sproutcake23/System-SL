@@ -1,291 +1,292 @@
-SOLO_LEVELING_QSS = """
-/* === Solo Leveling System theme === */
-/*
-   Inspired by The System's UI in the manhwa: deep navy/black background,
-   sharp electric-cyan accents, no rounded corners, high-contrast text.
-*/
+from system_sl.utils.theme_gen import DEFAULT_TOKENS
 
-QWidget {
-    background-color: #0b0f1a;
-    color: #d6e7ff;
+def get_stylesheet(t=DEFAULT_TOKENS):
+    """Generates the QSS string dynamically based on the provided token dictionary."""
+    return f"""
+/* === Solo Leveling System Dynamic Theme === */
+
+QWidget {{
+    background-color: {t['sys_color_surface']};
+    color: {t['sys_color_text_main']};
     font-family: "Segoe UI", "Helvetica Neue", "DejaVu Sans", sans-serif;
     font-size: 13px;
-}
+}}
 
-QMainWindow, QDialog {
-    background-color: #060912;
-}
+QMainWindow, QDialog {{
+    background-color: {t['sys_color_background']};
+}}
 
-QLabel {
+QLabel {{
     background-color: transparent;
-    color: #b3d4ff;
-}
+    color: {t['sys_color_text_secondary']};
+}}
 
 /* --- Buttons --- */
-QPushButton {
-    background-color: rgba(0, 217, 255, 0.08);
-    color: #67e8ff;
-    border: 1px solid #1f6f99;
+QPushButton {{
+    background-color: {t['sys_color_primary_dim']};
+    color: {t['sys_color_primary_light']};
+    border: 1px solid {t['sys_color_border']};
     border-radius: 0px;
     padding: 6px 14px;
     font-weight: bold;
-}
+}}
 
-QPushButton:hover {
-    background-color: rgba(0, 217, 255, 0.18);
-    color: #b6f1ff;
-    border: 1px solid #00d9ff;
-}
+QPushButton:hover {{
+    background-color: {t['sys_color_primary_hover']};
+    color: {t['sys_color_text_highlight']};
+    border: 1px solid {t['sys_color_primary']};
+}}
 
-QPushButton:pressed {
-    background-color: rgba(0, 217, 255, 0.30);
-    border: 1px solid #67e8ff;
-}
+QPushButton:pressed {{
+    background-color: {t['sys_color_primary_pressed']};
+    border: 1px solid {t['sys_color_primary_light']};
+}}
 
-QPushButton:checked {
-    background-color: rgba(0, 217, 255, 0.30);
-    color: #b6f1ff;
-    border: 1px solid #00d9ff;
-}
+QPushButton:checked {{
+    background-color: {t['sys_color_primary_pressed']};
+    color: {t['sys_color_text_highlight']};
+    border: 1px solid {t['sys_color_primary']};
+}}
 
-QPushButton:disabled {
+QPushButton:disabled {{
     background-color: rgba(255, 255, 255, 0.02);
-    color: #3d4d68;
-    border: 1px solid #1a2638;
-}
+    color: {t['sys_color_text_muted']};
+    border: 1px solid {t['sys_color_border_muted']};
+}}
 
 /* --- Checkbox --- */
-QCheckBox {
-    color: #b3d4ff;
+QCheckBox {{
+    color: {t['sys_color_text_secondary']};
     spacing: 8px;
     background-color: transparent;
-}
+}}
 
-QCheckBox::indicator {
+QCheckBox::indicator {{
     width: 14px;
     height: 14px;
-    border: 1px solid #1f6f99;
-    background-color: #0b0f1a;
-}
+    border: 1px solid {t['sys_color_border']};
+    background-color: {t['sys_color_surface']};
+}}
 
-QCheckBox::indicator:hover {
-    border: 1px solid #00d9ff;
-}
+QCheckBox::indicator:hover {{
+    border: 1px solid {t['sys_color_primary']};
+}}
 
-QCheckBox::indicator:checked {
-    background-color: #00d9ff;
-    border: 1px solid #00d9ff;
-}
+QCheckBox::indicator:checked {{
+    background-color: {t['sys_color_primary']};
+    border: 1px solid {t['sys_color_primary']};
+}}
 
 /* --- Text inputs --- */
-QLineEdit, QDateEdit, QTextEdit, QComboBox, QSpinBox, QPlainTextEdit {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    border: 1px solid #1f6f99;
+QLineEdit, QDateEdit, QTextEdit, QComboBox, QSpinBox, QPlainTextEdit {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    border: 1px solid {t['sys_color_border']};
     border-radius: 0px;
     padding: 4px 6px;
-    selection-background-color: #1f6f99;
+    selection-background-color: {t['sys_color_border']};
     selection-color: #ffffff;
-}
+}}
 
 QLineEdit:focus, QDateEdit:focus, QTextEdit:focus,
-QComboBox:focus, QSpinBox:focus, QPlainTextEdit:focus {
-    border: 1px solid #00d9ff;
-}
+QComboBox:focus, QSpinBox:focus, QPlainTextEdit:focus {{
+    border: 1px solid {t['sys_color_primary']};
+}}
 
-QLineEdit:disabled, QDateEdit:disabled, QComboBox:disabled {
-    background-color: #0a0f1c;
-    color: #3d4d68;
-    border: 1px solid #16263a;
-}
+QLineEdit:disabled, QDateEdit:disabled, QComboBox:disabled {{
+    background-color: {t['sys_color_background']};
+    color: {t['sys_color_text_muted']};
+    border: 1px solid {t['sys_color_border_muted']};
+}}
 
 /* --- List widget (task list) --- */
-QListWidget {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    border: 1px solid #1f6f99;
+QListWidget {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    border: 1px solid {t['sys_color_border']};
     border-radius: 0px;
     outline: 0;
-}
+}}
 
-QListWidget::item {
+QListWidget::item {{
     padding: 6px 8px;
-    border-bottom: 1px solid #142036;
-}
+    border-bottom: 1px solid {t['sys_color_background']};
+}}
 
-QListWidget::item:hover {
-    background-color: rgba(0, 217, 255, 0.06);
-}
+QListWidget::item:hover {{
+    background-color: {t['sys_color_primary_dim']};
+}}
 
-QListWidget::item:selected {
-    background-color: rgba(0, 217, 255, 0.18);
-    color: #b6f1ff;
-    border-left: 2px solid #00d9ff;
-}
+QListWidget::item:selected {{
+    background-color: {t['sys_color_primary_hover']};
+    color: {t['sys_color_text_highlight']};
+    border-left: 2px solid {t['sys_color_primary']};
+}}
 
 /* --- Progress bar --- */
-QProgressBar {
-    background-color: #0e1626;
-    border: 1px solid #1f6f99;
+QProgressBar {{
+    background-color: {t['sys_color_surface_raised']};
+    border: 1px solid {t['sys_color_border']};
     border-radius: 0px;
     text-align: center;
-    color: #b3d4ff;
+    color: {t['sys_color_text_secondary']};
     height: 22px;
     font-size: 12px;
-}
+}}
 
-QProgressBar::chunk {
-    background-color: #00d9ff;
-}
+QProgressBar::chunk {{
+    background-color: {t['sys_color_primary']};
+}}
 
 /* --- Combo box popup --- */
-QComboBox::drop-down {
+QComboBox::drop-down {{
     border: none;
     width: 18px;
     background-color: transparent;
-}
+}}
 
-QComboBox::down-arrow {
+QComboBox::down-arrow {{
     image: none;
     width: 6px;
     height: 6px;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 5px solid #67e8ff;
+    border-top: 5px solid {t['sys_color_primary_light']};
     margin-right: 6px;
-}
+}}
 
-QComboBox QAbstractItemView {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    border: 1px solid #1f6f99;
-    selection-background-color: rgba(0, 217, 255, 0.22);
-    selection-color: #b6f1ff;
-}
+QComboBox QAbstractItemView {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    border: 1px solid {t['sys_color_border']};
+    selection-background-color: {t['sys_color_primary_dim']};
+    selection-color: {t['sys_color_text_highlight']};
+}}
 
 /* --- Date edit / calendar popup --- */
-QDateEdit::drop-down {
+QDateEdit::drop-down {{
     border: none;
     width: 18px;
-}
+}}
 
-QCalendarWidget {
-    background-color: #0e1626;
-}
+QCalendarWidget {{
+    background-color: {t['sys_color_surface_raised']};
+}}
 
-QCalendarWidget QWidget {
-    background-color: #0e1626;
-    color: #d6e7ff;
-}
+QCalendarWidget QWidget {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+}}
 
-QCalendarWidget QWidget#qt_calendar_navigationbar {
-    background-color: #0b1424;
-}
+QCalendarWidget QWidget#qt_calendar_navigationbar {{
+    background-color: {t['sys_color_background']};
+}}
 
-QCalendarWidget QToolButton {
-    color: #b6f1ff;
+QCalendarWidget QToolButton {{
+    color: {t['sys_color_text_highlight']};
     background-color: transparent;
     border: 1px solid transparent;
     padding: 4px 8px;
-}
+}}
 
-QCalendarWidget QToolButton:hover {
-    background-color: rgba(0, 217, 255, 0.18);
-    border: 1px solid #00d9ff;
-}
+QCalendarWidget QToolButton:hover {{
+    background-color: {t['sys_color_primary_hover']};
+    border: 1px solid {t['sys_color_primary']};
+}}
 
-QCalendarWidget QSpinBox {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    border: 1px solid #1f6f99;
-}
+QCalendarWidget QSpinBox {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    border: 1px solid {t['sys_color_border']};
+}}
 
-QCalendarWidget QAbstractItemView:enabled {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    selection-background-color: rgba(0, 217, 255, 0.32);
+QCalendarWidget QAbstractItemView:enabled {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    selection-background-color: {t['sys_color_primary_hover']};
     selection-color: #ffffff;
-}
+}}
 
-QCalendarWidget QAbstractItemView:disabled {
-    color: #324158;
-}
+QCalendarWidget QAbstractItemView:disabled {{
+    color: {t['sys_color_text_muted']};
+}}
 
 /* --- Scrollbars --- */
-QScrollBar:vertical {
-    background-color: #0b0f1a;
+QScrollBar:vertical {{
+    background-color: {t['sys_color_surface']};
     width: 10px;
     border: none;
     margin: 0px;
-}
+}}
 
-QScrollBar::handle:vertical {
-    background-color: #1f6f99;
+QScrollBar::handle:vertical {{
+    background-color: {t['sys_color_border']};
     min-height: 24px;
     border: none;
-}
+}}
 
-QScrollBar::handle:vertical:hover {
-    background-color: #00d9ff;
-}
+QScrollBar::handle:vertical:hover {{
+    background-color: {t['sys_color_primary']};
+}}
 
-QScrollBar:horizontal {
-    background-color: #0b0f1a;
+QScrollBar:horizontal {{
+    background-color: {t['sys_color_surface']};
     height: 10px;
     border: none;
-}
+}}
 
-QScrollBar::handle:horizontal {
-    background-color: #1f6f99;
+QScrollBar::handle:horizontal {{
+    background-color: {t['sys_color_border']};
     min-width: 24px;
-}
+}}
 
-QScrollBar::handle:horizontal:hover {
-    background-color: #00d9ff;
-}
+QScrollBar::handle:horizontal:hover {{
+    background-color: {t['sys_color_primary']};
+}}
 
-QScrollBar::add-line, QScrollBar::sub-line {
+QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{
     width: 0;
     height: 0;
     background: none;
     border: none;
-}
-
-QScrollBar::add-page, QScrollBar::sub-page {
-    background: none;
-}
+}}
 
 /* --- Message boxes --- */
-QMessageBox {
-    background-color: #060912;
-}
+QMessageBox {{
+    background-color: {t['sys_color_background']};
+}}
 
-QMessageBox QLabel {
-    color: #d6e7ff;
+QMessageBox QLabel {{
+    color: {t['sys_color_text_main']};
     background-color: transparent;
-}
+}}
 
 /* --- Menus / context menus --- */
-QMenu {
-    background-color: #0e1626;
-    color: #d6e7ff;
-    border: 1px solid #1f6f99;
-}
+QMenu {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_main']};
+    border: 1px solid {t['sys_color_border']};
+}}
 
-QMenu::item {
+QMenu::item {{
     padding: 4px 18px;
-}
+}}
 
-QMenu::item:selected {
-    background-color: rgba(0, 217, 255, 0.20);
-    color: #b6f1ff;
-}
+QMenu::item:selected {{
+    background-color: {t['sys_color_primary_hover']};
+    color: {t['sys_color_text_highlight']};
+}}
 
 /* --- Tooltips --- */
-QToolTip {
-    background-color: #0e1626;
-    color: #b6f1ff;
-    border: 1px solid #00d9ff;
+QToolTip {{
+    background-color: {t['sys_color_surface_raised']};
+    color: {t['sys_color_text_highlight']};
+    border: 1px solid {t['sys_color_primary']};
     padding: 4px 6px;
-}
+}}
 """
+
+# --- BACKWARD COMPATIBILITY ---
+# Any other file still doing `from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS` 
+# will gracefully receive the default Solo Leveling theme generated by your new function!
+SOLO_LEVELING_QSS = get_stylesheet(DEFAULT_TOKENS)

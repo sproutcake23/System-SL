@@ -168,7 +168,3 @@ def get_wallpaper_path():
     
     else:
         return f"Unsupported OS: {system_name}"
-
-
-if __name__ == "__main__":
-    print(f"Detected Wallpaper Path:\n{get_wallpaper_path()}")
