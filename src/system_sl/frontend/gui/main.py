@@ -30,8 +30,8 @@ from system_sl.utils.audio_manager import (
     set_sound_setting,
     DEFAULT_SOUNDS_DIR,
 )
-from system_sl.core.priority_engine_new import run_prioritizationfrom 
-# --- ADDED: Wallpaper path fetcher and Theme Generator ---
+from system_sl.core.priority_engine_new import run_prioritization
+# --- ADDED: Wallpaper path fetcher and Theme Generator imports ---
 from system_sl.utils import get_wallpaper_path
 from system_sl.utils.theme_gen import generate_dynamic_tokens
 
@@ -90,13 +90,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(left_widget, stretch=1)
         layout.addWidget(self.chat_panel, stretch=3)
 
-
-
         # Start the background watcher if it was enabled during the last session
         if is_dynamic:
             self.start_dynamic_theming()
 
-    def open_tasks_wrun_prioritization(display=False)indow(self):
+    def open_tasks_window(self):
         if self.tasks_window is None:
             self.tasks_window = TasksWindow()
         self.tasks_window.show()
@@ -153,7 +151,7 @@ class MainWindow(QMainWindow):
     def stop_dynamic_theming(self):
         self.wallpaper_timer.stop()
         self.last_wallpaper_path = None
-        QApplication.instance().setStyleSheet(get_stylesheet()) # Reset to fallback Solo Leveling Theme
+        QApplication.instance().setStyleSheet(get_stylesheet()) # Reset to fallback Theme
 
     def check_wallpaper_update(self):
         current_path = get_wallpaper_path()
@@ -169,17 +167,14 @@ class MainWindow(QMainWindow):
 
 
 def main():
-    
-    # 1. Your original prioritization logic
     run_prioritization(display=False)
-    
     app = QApplication(sys.argv)
     
-    # 2. Inject the dynamic stylesheet on launch
+    # --- CHANGED: Inject the dynamic stylesheet on launch ---
     app.setStyleSheet(get_stylesheet())
 
     if "--bg" in sys.argv:
-        # 3. Fetch live theme specifically for background notifications
+        # --- NEW: Fetch live theme specifically for background notifications ---
         current_wall = get_wallpaper_path()
         if current_wall and "Error" not in current_wall:
             expanded_path = os.path.expanduser(current_wall)
@@ -189,6 +184,10 @@ def main():
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
         sys.exit(app.exec())
+    # Background notifier mode: the autostart systemd unit launches the app with
+    # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
+    # menu. Opening the menu here would make the always-restarting service
+    # reopen it every time it was closed.
 
     env_path = Path(get_tasks_file_path(".env"))
     if env_path.exists():

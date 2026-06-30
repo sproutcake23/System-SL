@@ -1,3 +1,4 @@
+import os
 import html
 
 from PySide6.QtCore import QObject, QThread, Signal
@@ -13,17 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from system_sl.chatbot import ChatSession, ChatConfigError
-
-
-
-# Solo Leveling colors used inline in the QTextEdit. Borders / backgrounds come
-# from the global stylesheet; per-line text color is set here because QSS can't
-# style individual paragraphs in a QTextEdit.
-PLAYER_COLOR = "#9ab8e5"
-SYSTEM_COLOR = "#00d9ff"
-FRIEND_COLOR = "#c084fc"
-ALERT_COLOR = "#ff6b8a"
-BODY_COLOR = "#d6e7ff"
+# --- NEW: Import Dynamic Theming Utilities ---
+from system_sl.utils import get_wallpaper_path
+from system_sl.utils.theme_gen import generate_dynamic_tokens, DEFAULT_TOKENS
 
 
 class _ChatWorker(QObject):
@@ -84,11 +77,23 @@ class ChatPanel(QWidget):
 
     def _current_mode(self) -> str:
         return self.mode_combo.currentText()
+    
+    def _get_live_tokens(self) -> dict:
+        """Fetches the live dynamic theme colors for the chat HTML."""
+        try:
+            path = get_wallpaper_path()
+            if path and "Error" not in path:
+                return generate_dynamic_tokens(os.path.expanduser(path))
+        except Exception:
+            pass
+        return DEFAULT_TOKENS
 
-    def _bot_label(self) -> tuple[str, str]:
+    def _bot_label(self, tokens: dict) -> tuple[str, str]:
         if self._current_mode() == "system":
-            return "SYSTEM", SYSTEM_COLOR
-        return "FRIEND", FRIEND_COLOR
+            # Map SYSTEM to the dynamic primary accent color
+            return "SYSTEM", tokens.get("sys_color_primary", "#00d9ff")
+        # Friend persona remains distinct purple
+        return "FRIEND", "#c084fc"
 
     def _get_session(self, mode: str) -> ChatSession | None:
         if mode not in self._sessions:
@@ -107,25 +112,32 @@ class ChatPanel(QWidget):
     def _append_html(self, html_line: str) -> None:
         self.transcript.append(html_line)
 
-    def _format_line(self, label: str, label_color: str, text: str) -> str:
+    def _format_line(self, label: str, label_color: str, body_color: str, text: str) -> str:
         safe = html.escape(text).replace("\n", "<br>")
         return (
             f'<span style="color:{label_color}; font-weight:bold">[{label}]</span> '
-            f'<span style="color:{BODY_COLOR}">{safe}</span>'
+            f'<span style="color:{body_color}">{safe}</span>'
         )
 
     def _append_player(self, text: str) -> None:
-        self._append_html(self._format_line("PLAYER", PLAYER_COLOR, text))
+        tokens = self._get_live_tokens()
+        # Map Player to the secondary text color
+        label_color = tokens.get("sys_color_text_secondary", "#9ab8e5")
+        body_color = tokens.get("sys_color_text_main", "#d6e7ff")
+        self._append_html(self._format_line("PLAYER", label_color, body_color, text))
 
     def _append_bot(self, text: str) -> None:
-        label, color = self._bot_label()
-        self._append_html(self._format_line(label, color, text))
+        tokens = self._get_live_tokens()
+        label, label_color = self._bot_label(tokens)
+        body_color = tokens.get("sys_color_text_main", "#d6e7ff")
+        self._append_html(self._format_line(label, label_color, body_color, text))
 
     def _append_alert(self, text: str) -> None:
         safe = html.escape(text).replace("\n", "<br>")
+        alert_color = "#ff6b8a" # Alerts stay explicitly red
         self._append_html(
-            f'<span style="color:{ALERT_COLOR}; font-weight:bold">[ALERT]</span> '
-            f'<span style="color:{ALERT_COLOR}">{safe}</span>'
+            f'<span style="color:{alert_color}; font-weight:bold">[ALERT]</span> '
+            f'<span style="color:{alert_color}">{safe}</span>'
         )
 
     # ----- input flow -----
