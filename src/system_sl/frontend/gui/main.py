@@ -1,9 +1,10 @@
 import os
 import sys
 from pathlib import Path
+import subprocess
 
 from dotenv import load_dotenv, set_key
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, QFileSystemWatcher, Slot, QObject
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
 from system_sl.frontend.gui.popup_windows import TasksWindow, OnboardingWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
 from system_sl.frontend.gui.theme import SOLO_LEVELING_QSS
-from system_sl.utils import AutostartManager, SystemNotification, get_tasks_file_path
+from system_sl.utils import CrossPlatformAutostart, SystemNotification, get_tasks_file_path
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 from system_sl.core.onboarding import PersonaStorageHandler
 from system_sl.services import BackgroundServiceController
@@ -29,6 +30,11 @@ from system_sl.utils.audio_manager import (
     DEFAULT_SOUNDS_DIR,
 )
 from system_sl.core.priority_engine_new import run_prioritization
+from system_sl.utils.autostart_migration import initialize_application_autostart
+
+os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+sys.path.append("/home/sriram/Documents/projects/System-SL")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -36,7 +42,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Main Menu")
         self.setMinimumSize(QSize(700, 400))
 
-        self.autostart = AutostartManager()
+        self.autostart = CrossPlatformAutostart()
         self.tasks_window = None
 
         main_container = QWidget()
@@ -116,15 +122,54 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Failed to set sound:\n{str(e)}")
 
 
+# ─── ADD THIS RELOADER CLASS AT THE TOP OF YOUR FILE ──────────────────
+class DevelopmentAutoReloader(QObject):
+    """Watches the source file and instantly swaps the process in RAM when you save."""
+    def __init__(self, app_instance: QApplication):
+        super().__init__()
+        self.app = app_instance
+        self.watcher = QFileSystemWatcher()
+        
+        # Monitor the absolute path of this main.py file
+        self.script_path = os.path.abspath(sys.argv[0])
+        self.watcher.addPath(self.script_path)
+        self.watcher.fileChanged.connect(self.trigger_hot_reload)
+        print(f"[RELOADER] Monitoring file for live RAM updates: {self.script_path}")
+
+    @Slot(str)
+    def trigger_hot_reload(self, path: str):
+        print("\n[RELOADER] Change detected! Swapping process in RAM...")
+        
+        # Cross-platform check for compiled executable deployment vs source development
+        if getattr(sys, "frozen", False):
+            # Deployed Mode: The executable spawns itself directly
+            subprocess.Popen([sys.executable] + sys.argv[1:])
+        else:
+            # Development Mode: Python spawns the live script file
+            subprocess.Popen([sys.executable, self.script_path] + sys.argv[1:])
+        
+        # Kill this old instance out of memory instantly
+        self.app.quit()
+        os._exit(0)
+
 def main():
     run_prioritization(display=False)
     app = QApplication(sys.argv)
     app.setStyleSheet(SOLO_LEVELING_QSS)
+    app.setQuitOnLastWindowClosed(False)
+    initialize_application_autostart()
+
+    view = None
+    controller = None
+    main_window = None
 
     if "--bg" in sys.argv:
         view = SystemNotification()
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
+
+        reloader = DevelopmentAutoReloader(app)
+        
         sys.exit(app.exec())
     # Background notifier mode: the autostart systemd unit launches the app with
     # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
