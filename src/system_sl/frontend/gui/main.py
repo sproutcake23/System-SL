@@ -32,9 +32,7 @@ from system_sl.utils.audio_manager import (
 from system_sl.core.priority_engine_new import run_prioritization
 from system_sl.utils.autostart_migration import initialize_application_autostart
 
-os.environ["QT_QPA_PLATFORM"] = "xcb"
 
-sys.path.append("/home/sriram/Documents/projects/System-SL")
 
 class MainWindow(QMainWindow):
     def __init__(self):
