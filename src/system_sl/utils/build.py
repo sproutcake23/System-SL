@@ -10,6 +10,7 @@ def main():
             sys.executable, "-m", "PyInstaller",
             "--name", "system-sl",
             "--windowed",
+            "--noconsole",
             "--onefile",
             "--add-binary", "spellchecker/resources/en.json.gz:spellchecker/resources",
             "--add-data", "assets:assets",
