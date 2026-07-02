@@ -92,7 +92,7 @@ class CrossPlatformAutostart:
     def _get_exec_cmd(self) -> str:
         """Determines the correct command to execute this script/binary safely cross-platform."""
         if getattr(sys, "frozen", False):
-            return os.path.abspath(sys.executable)
+            return f'"{os.path.abspath(sys.executable)}" --bg'
         
 
         script_path = os.path.abspath(sys.argv[0])
@@ -134,7 +134,7 @@ class CrossPlatformAutostart:
             try:
                 key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
                 # For Windows, we wrap the command in quotes if it contains spaces
-                winreg.SetValueEx(key, self.app_name, 0, winreg.REG_SZ, f'"{exec_cmd}"')
+                winreg.SetValueEx(key, self.app_name, 0, winreg.REG_SZ, exec_cmd)
                 return True
             except Exception as e:
                 print(f"Windows Registry Error: {e}")

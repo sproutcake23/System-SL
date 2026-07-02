@@ -117,6 +117,8 @@ class TaskAnalyzer:
                 "html",
             ]
         )
+        self._nlp = self.setup._get_model()
+  
 
     def correct_typos(self, text: str) -> str:
         """Fixes spelling mistakes in a string before NLP processing."""
@@ -163,7 +165,7 @@ class TaskAnalyzer:
         try:
             clean_title = self.correct_typos(title.lower())  # Typo correction
 
-            nlp = self.setup._get_model()
+            nlp = self._nlp
             doc = nlp(clean_title)
             verbs = {token.lemma_ for token in doc if token.pos_ == "VERB"}
 
@@ -182,7 +184,7 @@ class TaskAnalyzer:
         """Compute semantic alignment with the user's vector."""
         try:
             clean_title = self.correct_typos(title.lower())  # typo correction
-            nlp = self.setup._get_model()
+            nlp = self._nlp
             doc = nlp(clean_title)
 
             if not doc.has_vector:

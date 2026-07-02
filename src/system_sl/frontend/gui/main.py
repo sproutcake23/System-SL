@@ -120,59 +120,62 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Failed to set sound:\n{str(e)}")
 
 
-# ─── ADD THIS RELOADER CLASS AT THE TOP OF YOUR FILE ──────────────────
-class DevelopmentAutoReloader(QObject):
-    """Watches the source file and instantly swaps the process in RAM when you save."""
-    def __init__(self, app_instance: QApplication):
-        super().__init__()
-        self.app = app_instance
-        self.watcher = QFileSystemWatcher()
+# # ─── ADD THIS RELOADER CLASS AT THE TOP OF YOUR FILE ──────────────────
+# class DevelopmentAutoReloader(QObject):
+#     """Watches the source file and instantly swaps the process in RAM when you save."""
+#     def __init__(self, app_instance: QApplication):
+#         super().__init__()
+#         self.app = app_instance
+#         self.watcher = QFileSystemWatcher()
         
-        # Monitor the absolute path of this main.py file
-        self.script_path = os.path.abspath(sys.argv[0])
-        self.watcher.addPath(self.script_path)
-        self.watcher.fileChanged.connect(self.trigger_hot_reload)
-        print(f"[RELOADER] Monitoring file for live RAM updates: {self.script_path}")
+#         # Monitor the absolute path of this main.py file
+#         self.script_path = os.path.abspath(sys.argv[0])
+#         self.watcher.addPath(self.script_path)
+#         self.watcher.fileChanged.connect(self.trigger_hot_reload)
+#         print(f"[RELOADER] Monitoring file for live RAM updates: {self.script_path}")
 
-    @Slot(str)
-    def trigger_hot_reload(self, path: str):
-        print("\n[RELOADER] Change detected! Swapping process in RAM...")
+#     @Slot(str)
+#     def trigger_hot_reload(self, path: str):
+#         print("\n[RELOADER] Change detected! Swapping process in RAM...")
         
-        # Cross-platform check for compiled executable deployment vs source development
-        if getattr(sys, "frozen", False):
-            # Deployed Mode: The executable spawns itself directly
-            subprocess.Popen([sys.executable] + sys.argv[1:])
-        else:
-            # Development Mode: Python spawns the live script file
-            subprocess.Popen([sys.executable, self.script_path] + sys.argv[1:])
+#         # Cross-platform check for compiled executable deployment vs source development
+#         if getattr(sys, "frozen", False):
+#             # Deployed Mode: The executable spawns itself directly
+#             subprocess.Popen([sys.executable] + sys.argv[1:])
+#         else:
+#             # Development Mode: Python spawns the live script file
+#             subprocess.Popen([sys.executable, self.script_path] + sys.argv[1:])
         
-        # Kill this old instance out of memory instantly
-        self.app.quit()
-        os._exit(0)
+#         # Kill this old instance out of memory instantly
+#         self.app.quit()
+#         os._exit(0)
 
 def main():
-    run_prioritization(display=False)
+
     app = QApplication(sys.argv)
     app.setStyleSheet(SOLO_LEVELING_QSS)
     app.setQuitOnLastWindowClosed(False)
     initialize_application_autostart()
 
+    # reload = DevelopmentAutoReloader(app)
+
     view = None
     controller = None
-    main_window = None
-
+    
     if "--bg" in sys.argv:
+        print("[INFO] Running in background notifier mode...")
         view = SystemNotification()
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
 
-        reloader = DevelopmentAutoReloader(app)
         
         sys.exit(app.exec())
     # Background notifier mode: the autostart systemd unit launches the app with
     # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
     # menu. Opening the menu here would make the always-restarting service
     # reopen it every time it was closed.
+
+
 
 
     env_path = Path(get_tasks_file_path(".env"))
@@ -213,8 +216,12 @@ def main():
             onboarding.onboarding_complete.connect(_on_onboarding_done)
             onboarding.show()
         else:
+            print("hello")
             main_window = MainWindow()
             main_window.show()
+            v = SystemNotification()
+            control = BackgroundServiceController(v)
+            control.poll_and_render_task()  
 
 
 
