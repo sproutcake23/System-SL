@@ -3,7 +3,7 @@ import random
 import os
 from datetime import datetime
 import platform
-
+from pathlib import Path
 
 from system_sl.utils import get_tasks_file_path
 from system_sl.utils import load_data, save_data
@@ -159,14 +159,29 @@ def get_random_task():
 
     return rand_task_obj["title"]
 
+
+# NOTE: Changed and removed the category thing
+def save_manual_order(tasks: list) -> None:
+    file = Path(TASK_ORDER_FILE_PATH)
+    order = [t.get("title", "") for t in tasks]
+    try:
+        with open(file, "w") as f:
+            json.dump({"order": order}, f)
+    except Exception:
+        pass
+
+
 def get_topn_task():
     """Picks an outstanding item completely at random across all non-empty active categories.
 
     Returns:
         tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
     """
-    tasks = load_data(TASK_ORDER_FILE_PATH)
-    tasks = tasks['order']
+    tasks = load_tasks()
+    if len(load_data(TASK_ORDER_FILE_PATH)) == 0:
+        save_manual_order(tasks)
+    task_order = load_data(TASK_ORDER_FILE_PATH) 
+    tasks = task_order['order']
     if len(tasks) >= 3:
         task = tasks[:3]
     else:
@@ -252,4 +267,4 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
 
 
 if __name__ == "__main__":
-    print(load_completed_tasks())
+    print(get_topn_task())

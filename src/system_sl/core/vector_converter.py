@@ -29,8 +29,9 @@ log = logging.getLogger(__name__)
 
 
 class Setup:
+    _nlp = None
     def __init__(self) -> None:
-        self._nlp = None  # For lazy model loading
+        pass  # For lazy model loading
 
     # def _get_config_dir(self) -> Path:
     #     """
@@ -88,9 +89,9 @@ class Setup:
 
     def _get_model(self) -> "spacy.language.Language":
         """Return the global spacy model, loading it on first call."""
-        if self._nlp is None:
-            self._nlp = self._load_spacy_model()
-        return self._nlp
+        if Setup._nlp is None:
+            Setup._nlp = self._load_spacy_model()
+        return Setup._nlp
 
 
 class Real_worker:
