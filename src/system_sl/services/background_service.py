@@ -20,7 +20,7 @@ class BackgroundServiceController(QObject):
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll_and_render_task)
-        self.timer.start(201000)
+        self.timer.start(1800000)
 
 
     def poll_and_render_task(self) -> None:
