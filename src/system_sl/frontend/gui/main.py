@@ -168,7 +168,6 @@ def main():
         controller = BackgroundServiceController(view)
         controller.poll_and_render_task()
 
-        
         sys.exit(app.exec())
     # Background notifier mode: the autostart systemd unit launches the app with
     # `--bg`. In this mode we run ONLY the hourly task notifier, never the main
@@ -216,7 +215,6 @@ def main():
             onboarding.onboarding_complete.connect(_on_onboarding_done)
             onboarding.show()
         else:
-            print("hello")
             main_window = MainWindow()
             main_window.show()
             v = SystemNotification()

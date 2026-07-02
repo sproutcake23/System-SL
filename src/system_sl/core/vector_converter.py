@@ -18,7 +18,6 @@ from datetime import datetime
 from pathlib import Path
 import logging  # important we will use this for debugging.
 import json
-from datetime import datetime
 
 
 from system_sl.core.tasks import load_completed_tasks
@@ -30,8 +29,9 @@ log = logging.getLogger(__name__)
 
 
 class Setup:
+    _nlp = None
     def __init__(self) -> None:
-        self._nlp = None  # For lazy model loading
+        pass  # For lazy model loading
 
     # def _get_config_dir(self) -> Path:
     #     """
@@ -89,9 +89,9 @@ class Setup:
 
     def _get_model(self) -> "spacy.language.Language":
         """Return the global spacy model, loading it on first call."""
-        if self._nlp is None:
-            self._nlp = self._load_spacy_model()
-        return self._nlp
+        if Setup._nlp is None:
+            Setup._nlp = self._load_spacy_model()
+        return Setup._nlp
 
 
 class Real_worker:
@@ -371,17 +371,20 @@ class Caching:
         try:
             with open(self.cache_path, "r", encoding="utf-8") as f:
                 cache = json.load(f)
+
             if "vector" not in cache or "persona_mtime" not in cache:
                 return None
 
             persona_mtime = self._get_file_mtime(self.persona_path)
             completed_mtime = self._get_file_mtime(self.completed_path)
+
             if (
                 persona_mtime > cache["persona_mtime"]
                 or completed_mtime > cache["completed_mtime"]
             ):
                 log.info("Source files changed — cache invalidated, rebuilding vector")
                 return None
+
             vector = np.array(cache["vector"], dtype=np.float32)
             log.info(
                 "Loaded user vector from cache (built %s)",
