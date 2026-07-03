@@ -181,11 +181,11 @@ def get_topn_task():
     if len(load_data(TASK_ORDER_FILE_PATH)) == 0:
         save_manual_order(tasks)
     task_order = load_data(TASK_ORDER_FILE_PATH) 
-    tasks = task_order['order']
-    if len(tasks) >= 3:
-        task = tasks[:3]
+    ntasks = task_order['order']
+    if len(ntasks) >= 3:
+        task = ntasks[:3]
     else:
-        task = tasks
+        task = ntasks
 
     return task
 
