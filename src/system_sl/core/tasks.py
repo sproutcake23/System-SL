@@ -218,9 +218,9 @@ def load_completed_tasks():
                     migrated = True
                 else:
                     new_data.append(task)
-            
+        data = new_data
+         
         if migrated:
-            data = new_data
             save_completed_tasks(new_data)
     return data
 

@@ -523,8 +523,9 @@ class PriorityPipeline:
             ]
 
         if not all_tasks:
+            save_manual_order(all_tasks)
             return self._empty_result("No tasks found")
-
+        
         # Context & Strategy
         ctx_str = self.context_engine.detect_context(all_tasks)
         ctx_profile = self.context_engine.PROFILES[ctx_str]
@@ -563,9 +564,12 @@ class PriorityPipeline:
         # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
 
         manual = load_manual_order()
+        print(scored_tasks)
         if manual:
             pos = {title: i for i, title in enumerate(manual)}
+            print(pos)
             scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
+        print(scored_tasks)
         task_title = []
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
@@ -594,10 +598,10 @@ class PriorityPipeline:
             },
             "all_tasks_ranked": scored_tasks,
         }
-
+        print(output)
         with open(self.output_file, "w") as f:
             json.dump(output, f, indent=2, default=str)
-
+        
         return output
 
     def _empty_result(self, reason: str) -> dict:
