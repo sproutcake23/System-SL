@@ -511,7 +511,7 @@ class Fusion:
         if self.completed_path.exists():
             try:
                 # completed_tasks=json.load(f)
-                completed_tasks = load_completed_tasks(self.completed_path)
+                completed_tasks = load_completed_tasks()
 
             except Exception as e:
                 print(f"Error {e}")
