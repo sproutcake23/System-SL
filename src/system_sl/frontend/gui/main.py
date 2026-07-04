@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(QSize(700, 400))
 
         # --- NEW: Theme Settings Initialization ---
-        self.settings = QSettings("SystemSL", "AppConfig")
+        self.settings = QSettings("system-sl", "AppConfig")
         self.last_wallpaper_path = None
         self.wallpaper_timer = QTimer(self)
         self.wallpaper_timer.timeout.connect(self.check_wallpaper_update)
