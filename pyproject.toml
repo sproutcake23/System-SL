@@ -28,6 +28,9 @@ dependencies = [
   "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
   "click>=8.4.1",
   "pyspellchecker",
+  "scholarly>=1.7.11",
+  "stem>=1.8.2",
+  "requests>=2.34.2",
 ]
 
 [project.scripts]
