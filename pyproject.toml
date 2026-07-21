@@ -7,27 +7,40 @@ name = "system-sl"
 version = "0.1.0"
 description = "A CLI-based Solo Leveling-inspired task management system."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 
 dependencies = [
-  "pywebview",
-  "PyQt6",
-  "PyQt6-WebEngine",
+  "pyside6",
   "qtpy",
   "google-api-python-client",
   "google-auth-httplib2",
   "google-auth-oauthlib",
+  "pyinstaller>=6.20.0",
+  "python-dotenv>=1.2.2",
+  "langchain>=1.3.1",
+  "langchain-core>=1.4.0",
+  "langchain-google-genai>=4.2.3",
+  "langsmith>=0.8.5",
+  "numpy>=2.4.6",
+  "openai>=2.38.0",
+  "protobuf>=7.35.0",
+  "spacy>=3.8.14",
+  "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
+  "click>=8.4.1",
+  "pyspellchecker",
 ]
 
 [project.scripts]
-system-sl = "utils.notifications:main"
-system-cli = "cli.main:main"
+system-sl = "system_sl.frontend.gui.main:main"
+build-sl = "system_sl.utils.build:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# CHANGE 2: Restrict package searching strictly to your new namespace folder
+include = ["system_sl*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.css", "*.mp3"]
