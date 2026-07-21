@@ -31,6 +31,11 @@ from system_sl.utils.audio_manager import (
 )
 from system_sl.core.priority_engine_new import run_prioritization
 from system_sl.utils.autostart_migration import initialize_application_autostart
+from system_sl.utils.auto_updater import (
+    UpdateCheckThread,
+    load_auto_update_preference,
+    save_auto_update_preference,
+)
 
 
 
@@ -42,6 +47,7 @@ class MainWindow(QMainWindow):
 
         self.autostart = CrossPlatformAutostart()
         self.tasks_window = None
+        self.update_thread = None
 
         main_container = QWidget()
         self.setCentralWidget(main_container)
@@ -69,6 +75,11 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(google_button)
         left_layout.addWidget(sound_button)
         left_layout.addWidget(self.check_box)
+
+        self.auto_update_check = QCheckBox("Auto Update")
+        self.auto_update_check.setChecked(load_auto_update_preference())
+        self.auto_update_check.clicked.connect(self._toggle_auto_update)
+        left_layout.addWidget(self.auto_update_check)
 
         # right box — chatbot panel (system / friend modes)
         self.chat_panel = ChatPanel(self)
@@ -118,6 +129,24 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Success", "Notification sound updated!")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to set sound:\n{str(e)}")
+
+    def _toggle_auto_update(self):
+        enabled = self.auto_update_check.isChecked()
+        save_auto_update_preference(enabled)
+
+    def _check_for_updates(self):
+        if not load_auto_update_preference():
+            return
+        self.update_thread = UpdateCheckThread()
+        self.update_thread.update_complete.connect(self._on_update_complete)
+        self.update_thread.start()
+
+    def _on_update_complete(self, success, message):
+        if success:
+            QMessageBox.information(self, "Auto Update", message)
+        else:
+            if "Updated to" not in message:
+                QMessageBox.warning(self, "Auto Update", message)
 
 
 # # ─── ADD THIS RELOADER CLASS AT THE TOP OF YOUR FILE ──────────────────
@@ -211,12 +240,14 @@ def main():
                 nonlocal main_window
                 main_window = MainWindow()
                 main_window.show()
+                main_window._check_for_updates()
 
             onboarding.onboarding_complete.connect(_on_onboarding_done)
             onboarding.show()
         else:
             main_window = MainWindow()
             main_window.show()
+            main_window._check_for_updates()
             v = SystemNotification()
             control = BackgroundServiceController(v)
             control.poll_and_render_task()  
