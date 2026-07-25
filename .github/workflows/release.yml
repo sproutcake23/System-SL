@@ -79,3 +79,4 @@ jobs:
           system-sl-windows.zip
           --title "THE SYSTEM ${{ github.ref_name }}"
           --generate-notes
+          --notes-start-tag v1.1.0
