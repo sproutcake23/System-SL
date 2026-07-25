@@ -82,9 +82,15 @@ class Setup:
 
             if getattr(sys, "frozen", False):
                 bundle_dir = sys._MEIPASS
-                model_path = os.path.join(bundle_dir, "en_core_web_md")
-                if os.path.isdir(model_path):
-                    model = spacy.load(model_path)
+                model_pkg = os.path.join(bundle_dir, "en_core_web_md")
+                if os.path.isdir(model_pkg):
+                    for entry in os.listdir(model_pkg):
+                        candidate = os.path.join(model_pkg, entry)
+                        if os.path.isdir(candidate) and os.path.isfile(os.path.join(candidate, "config.cfg")):
+                            model = spacy.load(candidate)
+                            break
+                    else:
+                        model = spacy.load("en_core_web_md")
                 else:
                     model = spacy.load("en_core_web_md")
             else:
