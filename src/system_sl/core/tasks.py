@@ -209,7 +209,7 @@ def get_topn_task():
         order_data = load_data(TASK_ORDER_FILE_PATH)
 
     ntasks = order_data.get("order", [])
-    ntasks = [t for t in ntasks if t in active_titles]
+    ntasks = [t for t in ntasks if t in active_titles and t.strip()]
 
     return ntasks[:3]
 

@@ -76,6 +76,8 @@ class SystemNotification(QWidget):
         self.main_layout.addWidget(self.container)
 
     def display_message(self,message: list) -> None:
+        if not message or not any(m.strip() for m in message):
+            return
         while self.content_layout.count():
             item = self.content_layout.takeAt(0)
             widget = item.widget()
