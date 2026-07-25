@@ -77,13 +77,22 @@ class Setup:
 
         """
         try:
+            import sys
             import spacy
 
-            model = spacy.load("en_core_web_md")
+            if getattr(sys, "frozen", False):
+                bundle_dir = sys._MEIPASS
+                model_path = os.path.join(bundle_dir, "en_core_web_md")
+                if os.path.isdir(model_path):
+                    model = spacy.load(model_path)
+                else:
+                    model = spacy.load("en_core_web_md")
+            else:
+                model = spacy.load("en_core_web_md")
             log.info("spacy en_core_web_md is loaded. ")
             return model
         except OSError:
-            raise RuntimeError("[System Error model is not installed install manaually")
+            raise RuntimeError("[System Error] model is not installed — run: python -m spacy download en_core_web_md")
 
     # _nlp = None for lazy loading
 

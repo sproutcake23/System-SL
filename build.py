@@ -14,6 +14,7 @@ def run_build():
             "--noconfirm",
             "--clean",
             "--paths=src",
+            "--collect-data=en_core_web_md",
         ]
     )
 
