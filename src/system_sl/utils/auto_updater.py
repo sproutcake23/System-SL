@@ -167,6 +167,33 @@ def save_auto_update_preference(enabled: bool) -> None:
         json.dump(data, f, indent=2)
 
 
+def _load_last_check_time() -> float:
+    """Read the last update check timestamp from settings.json."""
+    try:
+        settings_path = Path(get_tasks_file_path("settings.json"))
+        if settings_path.exists():
+            with open(settings_path) as f:
+                data = json.load(f)
+            return data.get("last_update_check", 0)
+    except Exception:
+        pass
+    return 0
+
+
+def _save_last_check_time() -> None:
+    """Persist the current time as the last update check timestamp."""
+    import time as _time
+    from system_sl.utils.paths import get_tasks_file_path
+    settings_path = Path(get_tasks_file_path("settings.json"))
+    data = {}
+    if settings_path.exists():
+        with open(settings_path) as f:
+            data = json.load(f)
+    data["last_update_check"] = _time.time()
+    with open(settings_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
 class UpdateCheckThread(QThread):
     """Background thread that checks, downloads, and installs updates."""
 
@@ -176,7 +203,14 @@ class UpdateCheckThread(QThread):
 
     def run(self):
         try:
+            import time as _time
+
+            # Throttle: skip if checked within 24 hours
+            if _time.time() - _load_last_check_time() < 86400:
+                return
+
             current = get_current_version()
+            _save_last_check_time()
             release = get_latest_release_info()
             latest_tag = release.get("tag_name", "")
             assets = release.get("assets", [])
@@ -204,5 +238,10 @@ class UpdateCheckThread(QThread):
 
             self.update_complete.emit(True, f"Updated to {latest_tag}. Please restart the app.")
 
+        except requests.exceptions.HTTPError as e:
+            # Rate limit hit — fail silently, no popup
+            if e.response is not None and e.response.status_code == 403:
+                return
+            self.update_complete.emit(False, f"Update failed: {e}")
         except Exception as e:
             self.update_complete.emit(False, f"Update failed: {e}")
