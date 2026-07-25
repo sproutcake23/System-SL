@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: system-sl-linux
+            asset_ext: tar.xz
+          - os: windows-latest
+            artifact_name: system-sl-windows
+            asset_ext: zip
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build binary with PyInstaller
+        run: uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" --add-data "assets:assets" src/system_sl/frontend/gui/main.py
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: tar -cJf ${{ matrix.artifact_name }}.${{ matrix.asset_ext }} -C dist system-sl
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/system-sl.exe -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.asset_ext }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.${{ matrix.asset_ext }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: system-sl-linux
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: system-sl-windows
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          system-sl-linux.tar.xz
+          system-sl-windows.zip
+          --title "THE SYSTEM ${{ github.ref_name }}"
+          --generate-notes
