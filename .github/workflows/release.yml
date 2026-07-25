@@ -36,7 +36,7 @@ jobs:
         run: uv sync --extra build
 
       - name: Build binary with PyInstaller
-        run: uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" --add-data "assets:assets" --collect-data en_core_web_md src/system_sl/frontend/gui/main.py
+        run: uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" --add-data "assets:assets" --collect-all en_core_web_md src/system_sl/frontend/gui/main.py
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
