@@ -655,6 +655,7 @@ def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict
         user_vec = Fusion().build_user_vector()
     except Exception as e:
         print(f"\n[ERROR] Could not build user vector: {e}")
+        save_manual_order([])
         return PriorityPipeline()._empty_result("Vector generation failed")
 
     pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)
