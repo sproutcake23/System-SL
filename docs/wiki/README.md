@@ -6,15 +6,15 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 
 ## Preview
 
-![Main menu](assets/main.gif)
+![Main menu](https://github.com/sproutcake23/System-SL/blob/main/assets/main.gif?raw=true)
 
-![Task manager](assets/tasks.gif)
+![Task manager](https://github.com/sproutcake23/System-SL/blob/main/assets/tasks.gif?raw=true)
 
-![Onboarding wizard](assets/onboarding.gif)
+![Onboarding wizard](https://github.com/sproutcake23/System-SL/blob/main/assets/onboarding.gif?raw=true)
 
-![Chat](assets/chat.gif)
+![Chat](https://github.com/sproutcake23/System-SL/blob/main/assets/chat.gif?raw=true)
 
-![System notification](assets/notification.gif)
+![System notification](https://github.com/sproutcake23/System-SL/blob/main/assets/notification.gif?raw=true)
 
 ## Features
 
@@ -56,17 +56,11 @@ Build a standalone executable:
 uv run build-sl
 ```
 
-## Documentation
+## Other pages
 
-Full documentation lives in the wiki:
-
-- [Installation](https://github.com/sproutcake23/System-SL/wiki/Installation)
-- [Features](https://github.com/sproutcake23/System-SL/wiki/Features)
-- [Google Calendar Sync](https://github.com/sproutcake23/System-SL/wiki/Google-Calendar-Sync)
-- [CLI Usage](https://github.com/sproutcake23/System-SL/wiki/CLI-Usage)
-- [Background Service](https://github.com/sproutcake23/System-SL/wiki/Background-Service)
-- [Building and Releasing](https://github.com/sproutcake23/System-SL/wiki/Building-and-Releasing)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+- [Installation](Installation)
+- [Features](Features)
+- [Google Calendar Sync](Google-Calendar-Sync)
+- [CLI Usage](CLI-Usage)
+- [Background Service](Background-Service)
+- [Building and Releasing](Building-and-Releasing)
