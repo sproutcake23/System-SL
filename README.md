@@ -6,15 +6,17 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 
 ## Preview
 
-![Main menu](assets/main.gif)
-
-![Task manager](assets/tasks.gif)
-
-![Onboarding wizard](assets/onboarding.gif)
-
-![Chat](assets/chat.gif)
-
-![System notification](assets/notification.gif)
+<table>
+  <tr>
+    <td align="center"><img src="assets/main.gif" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
+    <td align="center"><img src="assets/tasks.gif" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
+    <td align="center"><img src="assets/onboarding.gif" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/chat.gif" width="240" alt="Chat"/><br/><em>Chat</em></td>
+    <td align="center"><img src="assets/notification.gif" width="240" alt="System notification"/><br/><em>System notification</em></td>
+  </tr>
+</table>
 
 ## Features
 
