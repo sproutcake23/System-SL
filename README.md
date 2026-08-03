@@ -8,28 +8,13 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 
 <table>
   <tr>
-    <td>
-      <p align="center"><img src="assets/main.gif" width="240" alt="Main menu"/></p>
-      <p align="center"><em>Main menu</em></p>
-    </td>
-    <td>
-      <p align="center"><img src="assets/tasks.gif" width="240" alt="Task manager"/></p>
-      <p align="center"><em>Task manager</em></p>
-    </td>
-    <td>
-      <p align="center"><img src="assets/onboarding.gif" width="240" alt="Onboarding wizard"/></p>
-      <p align="center"><em>Onboarding wizard</em></p>
-    </td>
+    <td align="center"><img src="assets/main.gif" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
+    <td align="center"><img src="assets/tasks.gif" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
+    <td align="center"><img src="assets/onboarding.gif" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
   </tr>
   <tr>
-    <td>
-      <p align="center"><img src="assets/chat.gif" width="240" alt="Chat"/></p>
-      <p align="center"><em>Chat</em></p>
-    </td>
-    <td>
-      <p align="center"><img src="assets/notification.gif" width="240" alt="System notification"/></p>
-      <p align="center"><em>System notification</em></p>
-    </td>
+    <td align="center"><img src="assets/chat.gif" width="240" alt="Chat"/><br/><em>Chat</em></td>
+    <td align="center"><img src="assets/notification.gif" width="240" alt="System notification"/><br/><em>System notification</em></td>
   </tr>
 </table>
 
