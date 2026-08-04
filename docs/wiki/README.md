@@ -8,13 +8,13 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 
 <table>
   <tr>
-    <td align="center"><img src="assets/main.gif" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
-    <td align="center"><img src="assets/tasks.gif" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
-    <td align="center"><img src="assets/onboarding.gif" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
+    <td align="center"><img src="https://github.com/sproutcake23/System-SL/blob/main/assets/main.gif?raw=true" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
+    <td align="center"><img src="https://github.com/sproutcake23/System-SL/blob/main/assets/tasks.gif?raw=true" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
+    <td align="center"><img src="https://github.com/sproutcake23/System-SL/blob/main/assets/onboarding.gif?raw=true" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/chat.gif" width="240" alt="Chat"/><br/><em>Chat</em></td>
-    <td align="center"><img src="assets/notification.gif" width="240" alt="System notification"/><br/><em>System notification</em></td>
+    <td align="center"><img src="https://github.com/sproutcake23/System-SL/blob/main/assets/chat.gif?raw=true" width="240" alt="Chat"/><br/><em>Chat</em></td>
+    <td align="center"><img src="https://github.com/sproutcake23/System-SL/blob/main/assets/notification.gif?raw=true" width="240" alt="System notification"/><br/><em>System notification</em></td>
   </tr>
 </table>
 
@@ -58,17 +58,11 @@ Build a standalone executable:
 uv run build-sl
 ```
 
-## Documentation
+## Other pages
 
-Full documentation lives in the wiki:
-
-- [Installation](https://github.com/sproutcake23/System-SL/wiki/Installation)
-- [Features](https://github.com/sproutcake23/System-SL/wiki/Features)
-- [Google Calendar Sync](https://github.com/sproutcake23/System-SL/wiki/Google-Calendar-Sync)
-- [CLI Usage](https://github.com/sproutcake23/System-SL/wiki/CLI-Usage)
-- [Background Service](https://github.com/sproutcake23/System-SL/wiki/Background-Service)
-- [Building and Releasing](https://github.com/sproutcake23/System-SL/wiki/Building-and-Releasing)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+- [Installation](Installation)
+- [Features](Features)
+- [Google Calendar Sync](Google-Calendar-Sync)
+- [CLI Usage](CLI-Usage)
+- [Background Service](Background-Service)
+- [Building and Releasing](Building-and-Releasing)
