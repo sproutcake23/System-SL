@@ -50,17 +50,79 @@ def get_wallpaper_path():
                 return f"Error running gsettings: {e}"
         
         elif "kde" in desktop:
-            # KDE stores settings in a plain text config file. We can parse it directly.
+            # KDE stores settings in a plain text config file. The active wallpaper
+            # lives under [Containments][<id>][Wallpaper][<plugin>][General] on a
+            # desktop containment (formfactor=0), keyed by that containment's
+            # wallpaperplugin. Naively grabbing the first "Image=" line picks up
+            # unrelated sections (other monitors, blur applets, stale entries).
             config_path = os.path.expanduser("~/.config/plasma-org.kde.plasma.desktop-appletsrc")
             if not os.path.exists(config_path):
                 return "Error: KDE config file not found."
-            
+
             try:
+                from system_sl.utils.theme_gen import resolve_wallpaper_path
+
                 with open(config_path, "r") as f:
-                    for line in f:
-                        if line.startswith("Image="):
-                            path = line.strip().split("=", 1)[1]
-                            return path.replace("file://", "")
+                    lines = f.read().splitlines()
+
+                containments = {}
+                current = None
+                section = None
+                for line in lines:
+                    if line.startswith("[Containments][") and line.endswith("]"):
+                        parts = line[1:-1].split("][")
+                        if len(parts) == 2 and parts[0] == "Containments":
+                            current = parts[1]
+                            containments.setdefault(current, {"images": {}})
+                            section = ("containment",)
+                            continue
+                    if current is None:
+                        continue
+                    if line == f"[Containments][{current}][General]":
+                        section = ("general",)
+                        continue
+                    if (line.startswith(f"[Containments][{current}][Wallpaper][")
+                            and line.endswith("][General]")):
+                        plugin = line[len(f"[Containments][{current}][Wallpaper]["):-len("][General]")]
+                        section = ("wallpaper", plugin)
+                        continue
+                    if line.startswith("["):
+                        section = None
+                        continue
+                    if section is None:
+                        continue
+                    if section[0] == "containment":
+                        if line.startswith("formfactor="):
+                            containments[current]["formfactor"] = line.split("=", 1)[1].strip()
+                        elif line.startswith("wallpaperplugin="):
+                            containments[current]["wallpaperplugin"] = line.split("=", 1)[1].strip()
+                    elif section[0] == "wallpaper" and line.startswith("Image="):
+                        img = line.split("=", 1)[1].strip().replace("file://", "")
+                        containments[current]["images"][section[1]] = img
+
+                # Prefer desktop containments, then any remaining ones.
+                desktops = [c for c in containments.values() if c.get("formfactor") == "0"]
+                if not desktops:
+                    desktops = list(containments.values())
+
+                candidates = []
+                for c in desktops:
+                    plugin = c.get("wallpaperplugin")
+                    if plugin and plugin in c.get("images", {}):
+                        candidates.append(c["images"][plugin])
+                for c in desktops:
+                    if "org.kde.image" in c.get("images", {}):
+                        candidates.append(c["images"]["org.kde.image"])
+                for c in containments.values():
+                    candidates.extend(c.get("images", {}).values())
+
+                # Return the first candidate that actually resolves to an image file.
+                for cand in candidates:
+                    resolved = resolve_wallpaper_path(cand)
+                    if resolved:
+                        return resolved
+                if candidates:
+                    return candidates[0]
             except Exception as e:
                 return f"Error reading KDE config: {e}"
             return "No active KDE wallpaper found in config."

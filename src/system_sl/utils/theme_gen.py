@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import colorsys
 from colorthief import ColorThief
 from PIL import Image
@@ -21,19 +22,75 @@ DEFAULT_TOKENS = {
     "sys_color_text_muted": "#3d4d68"
 }
 
+IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif",
+              ".tif", ".tiff", ".avif", ".jxl")
+
 def rgb_to_hex(rgb_tuple):
     r, g, b = [int(x * 255) for x in rgb_tuple]
     return f"#{r:02x}{g:02x}{b:02x}"
 
+def _pick_largest(files):
+    """Return the highest-resolution file based on the WxH in its name."""
+    best, best_area = None, -1
+    for f in files:
+        area = 0
+        m = re.search(r"(\d+)[xX](\d+)", os.path.splitext(os.path.basename(f))[0])
+        if m:
+            area = int(m.group(1)) * int(m.group(2))
+        if area > best_area:
+            best, best_area = f, area
+    return best if best is not None else (files[0] if files else None)
+
+def resolve_wallpaper_path(path):
+    """Turn a wallpaper path (file or KDE collection directory) into an image file."""
+    if not path:
+        return None
+    path = os.path.expanduser(path)
+    if os.path.isfile(path):
+        return path
+    if not os.path.isdir(path):
+        return None
+    # KDE wallpaper package layout: contents/images or contents/images_dark
+    for sub in ("contents/images_dark", "contents/images"):
+        d = os.path.join(path, sub)
+        if os.path.isdir(d):
+            candidates = [os.path.join(d, n) for n in sorted(os.listdir(d))
+                          if n.lower().endswith(IMAGE_EXTS)]
+            if candidates:
+                return _pick_largest(candidates)
+    candidates = []
+    for root, _, files in os.walk(path):
+        for n in sorted(files):
+            if n.lower().endswith(IMAGE_EXTS):
+                candidates.append(os.path.join(root, n))
+    return _pick_largest(candidates) if candidates else None
+
+def _open_image(path):
+    """Open an image, decoding JPEG XL (Fedora stock wallpapers) via imagecodecs."""
+    try:
+        return Image.open(path)
+    except Exception:
+        if path.lower().endswith(".jxl"):
+            from imagecodecs import jpegxl_decode
+            with open(path, "rb") as f:
+                arr = jpegxl_decode(f.read())
+            if arr.ndim == 3 and arr.shape[2] == 4:
+                return Image.fromarray(arr, "RGBA")
+            if arr.ndim == 3 and arr.shape[2] == 3:
+                return Image.fromarray(arr, "RGB")
+            return Image.fromarray(arr)
+        raise
+
 # CHANGED: Accept wallpaper_path as an argument!
 def generate_dynamic_tokens(wallpaper_path): 
-    if not wallpaper_path or not os.path.exists(wallpaper_path):
+    resolved = resolve_wallpaper_path(wallpaper_path)
+    if not resolved:
         return DEFAULT_TOKENS
 
     try:
         # OPTIMIZATION: Hold the tiny thumbnail in RAM (io.BytesIO) 
         # instead of writing to the hard drive. 100% Cross-platform!
-        with Image.open(wallpaper_path) as img:
+        with _open_image(resolved) as img:
             img.thumbnail((150, 150))
             img = img.convert("RGB")
             

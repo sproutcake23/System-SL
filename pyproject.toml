@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "system-sl"
-version = "0.1.0"
+version = "1.2.0"
 description = "A CLI-based Solo Leveling-inspired task management system."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -29,7 +29,8 @@ dependencies = [
   "click>=8.4.1",
   "pyspellchecker",
   "colorthief==0.2.1",
-  "Pillow==10.2.0",
+  "Pillow==12.3.0",
+  "imagecodecs>=2025.3.30,<2026",
 ]
 
 [project.scripts]
