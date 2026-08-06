@@ -117,6 +117,8 @@ class TaskAnalyzer:
                 "html",
             ]
         )
+        self._nlp = self.setup._get_model()
+  
 
     def correct_typos(self, text: str) -> str:
         """Fixes spelling mistakes in a string before NLP processing."""
@@ -163,7 +165,7 @@ class TaskAnalyzer:
         try:
             clean_title = self.correct_typos(title.lower())  # Typo correction
 
-            nlp = self.setup._get_model()
+            nlp = self._nlp
             doc = nlp(clean_title)
             verbs = {token.lemma_ for token in doc if token.pos_ == "VERB"}
 
@@ -182,7 +184,7 @@ class TaskAnalyzer:
         """Compute semantic alignment with the user's vector."""
         try:
             clean_title = self.correct_typos(title.lower())  # typo correction
-            nlp = self.setup._get_model()
+            nlp = self._nlp
             doc = nlp(clean_title)
 
             if not doc.has_vector:
@@ -521,8 +523,9 @@ class PriorityPipeline:
             ]
 
         if not all_tasks:
+            save_manual_order(all_tasks)
             return self._empty_result("No tasks found")
-
+        
         # Context & Strategy
         ctx_str = self.context_engine.detect_context(all_tasks)
         ctx_profile = self.context_engine.PROFILES[ctx_str]
@@ -561,9 +564,12 @@ class PriorityPipeline:
         # NOTE: LOGIC FOR THE MANAUL REORDERING JUST WE CHECK THAT MANAUL ORDER EXISTS OR NOTE
 
         manual = load_manual_order()
+        print(scored_tasks)
         if manual:
             pos = {title: i for i, title in enumerate(manual)}
+            print(pos)
             scored_tasks.sort(key=lambda t: pos.get(t.get("title", ""), -1))
+        print(scored_tasks)
         task_title = []
         quadrants = {q: [] for q in self.QUADRANTS}
         for task in scored_tasks:
@@ -592,10 +598,10 @@ class PriorityPipeline:
             },
             "all_tasks_ranked": scored_tasks,
         }
-
+        print(output)
         with open(self.output_file, "w") as f:
             json.dump(output, f, indent=2, default=str)
-
+        
         return output
 
     def _empty_result(self, reason: str) -> dict:
@@ -649,6 +655,7 @@ def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict
         user_vec = Fusion().build_user_vector()
     except Exception as e:
         print(f"\n[ERROR] Could not build user vector: {e}")
+        save_manual_order([])
         return PriorityPipeline()._empty_result("Vector generation failed")
 
     pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)

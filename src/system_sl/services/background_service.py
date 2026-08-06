@@ -20,11 +20,12 @@ class BackgroundServiceController(QObject):
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll_and_render_task)
-        self.timer.start(1800000)
+        self.timer.start(3600000)
 
 
     def poll_and_render_task(self) -> None:
         """Queries core task modules and passes data changes directly to the UI panel."""
         run_prioritization(display=False)
         ntask = get_topn_task()
-        self.view.display_message(ntask)
+        if len(ntask) > 0:
+            self.view.display_message(ntask)

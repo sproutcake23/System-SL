@@ -1,10 +1,7 @@
 import os
 import subprocess
-import sys
 import shutil
 from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent.parent))
 
 
 def migrate_credentials():
@@ -85,14 +82,24 @@ def install_sounds(source_sounds_dir: Path):
 
 
 def install_the_system():
-    project_root = Path(__file__).parent.parent.parent.parent.absolute()
     binary_name = "system-sl" if os.name != "nt" else "system-sl.exe"
 
-    source_path = project_root / "dist" / binary_name
-    sounds_folder = project_root / "assets" / "sounds"
+    bundle_dir = Path(__file__).parent.absolute()
+    project_root = bundle_dir.parent.parent.parent.parent
 
-    if not source_path.exists():
-        print(f"❌ Error: {binary_name} not found in {source_path.parent}!")
+    bundled_binary = bundle_dir / binary_name
+    dev_binary = project_root / "dist" / binary_name
+
+    if bundled_binary.exists():
+        source_path = bundled_binary
+        sounds_folder = bundle_dir / "assets" / "sounds"
+    elif dev_binary.exists():
+        source_path = dev_binary
+        sounds_folder = project_root / "assets" / "sounds"
+    else:
+        print(f"❌ Error: {binary_name} not found!")
+        print(f"  Looked in: {bundled_binary}")
+        print(f"         and: {dev_binary}")
         print("Did you remember to run PyInstaller first?")
         return
 

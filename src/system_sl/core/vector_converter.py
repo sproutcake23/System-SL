@@ -29,8 +29,9 @@ log = logging.getLogger(__name__)
 
 
 class Setup:
+    _nlp = None
     def __init__(self) -> None:
-        self._nlp = None  # For lazy model loading
+        pass  # For lazy model loading
 
     # def _get_config_dir(self) -> Path:
     #     """
@@ -76,21 +77,36 @@ class Setup:
 
         """
         try:
+            import sys
             import spacy
 
-            model = spacy.load("en_core_web_md")
+            if getattr(sys, "frozen", False):
+                bundle_dir = sys._MEIPASS
+                model_pkg = os.path.join(bundle_dir, "en_core_web_md")
+                if os.path.isdir(model_pkg):
+                    for entry in os.listdir(model_pkg):
+                        candidate = os.path.join(model_pkg, entry)
+                        if os.path.isdir(candidate) and os.path.isfile(os.path.join(candidate, "config.cfg")):
+                            model = spacy.load(candidate)
+                            break
+                    else:
+                        model = spacy.load("en_core_web_md")
+                else:
+                    model = spacy.load("en_core_web_md")
+            else:
+                model = spacy.load("en_core_web_md")
             log.info("spacy en_core_web_md is loaded. ")
             return model
         except OSError:
-            raise RuntimeError("[System Error model is not installed install manaually")
+            raise RuntimeError("[System Error] model is not installed — run: python -m spacy download en_core_web_md")
 
     # _nlp = None for lazy loading
 
     def _get_model(self) -> "spacy.language.Language":
         """Return the global spacy model, loading it on first call."""
-        if self._nlp is None:
-            self._nlp = self._load_spacy_model()
-        return self._nlp
+        if Setup._nlp is None:
+            Setup._nlp = self._load_spacy_model()
+        return Setup._nlp
 
 
 class Real_worker:
@@ -510,7 +526,7 @@ class Fusion:
         if self.completed_path.exists():
             try:
                 # completed_tasks=json.load(f)
-                completed_tasks = load_completed_tasks(self.completed_path)
+                completed_tasks = load_completed_tasks()
 
             except Exception as e:
                 print(f"Error {e}")

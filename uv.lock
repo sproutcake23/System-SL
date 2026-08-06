@@ -1733,12 +1733,17 @@ dependencies = [
     { name = "openai" },
     { name = "pillow" },
     { name = "protobuf" },
-    { name = "pyinstaller" },
     { name = "pyside6" },
     { name = "pyspellchecker" },
     { name = "python-dotenv" },
     { name = "qtpy" },
+    { name = "requests" },
     { name = "spacy" },
+]
+
+[package.optional-dependencies]
+build = [
+    { name = "pyinstaller" },
 ]
 
 [package.metadata]
@@ -1758,13 +1763,15 @@ requires-dist = [
     { name = "openai", specifier = ">=2.38.0" },
     { name = "pillow", specifier = "==12.3.0" },
     { name = "protobuf", specifier = ">=7.35.0" },
-    { name = "pyinstaller", specifier = ">=6.20.0" },
+    { name = "pyinstaller", marker = "extra == 'build'", specifier = ">=6.20.0" },
     { name = "pyside6" },
     { name = "pyspellchecker" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "qtpy" },
+    { name = "requests", specifier = ">=2.31.0" },
     { name = "spacy", specifier = ">=3.8.14" },
 ]
+provides-extras = ["build"]
 
 [[package]]
 name = "tenacity"

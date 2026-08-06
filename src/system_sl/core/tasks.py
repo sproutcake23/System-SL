@@ -3,7 +3,7 @@ import random
 import os
 from datetime import datetime
 import platform
-
+from pathlib import Path
 
 from system_sl.utils import get_tasks_file_path
 from system_sl.utils import load_data, save_data
@@ -141,7 +141,27 @@ def remove_tasks(task_title: str, task_type: str = "none"):
     #     tasks.pop(task_type)
 
     save_tasks(tasks)
+    _remove_from_task_order(task_title)
     return task_title
+
+
+def _remove_from_task_order(task_title: str) -> None:
+    """Strips a task title from the persisted manual ordering file.
+
+    Args:
+        task_title (str): The exact title to remove from the order list.
+    """
+    order_data = load_data(TASK_ORDER_FILE_PATH)
+    if not isinstance(order_data, dict) or "order" not in order_data:
+        return
+    current_order = order_data["order"]
+    filtered = [t for t in current_order if t != task_title]
+    if len(filtered) != len(current_order):
+        try:
+            with open(Path(TASK_ORDER_FILE_PATH), "w") as f:
+                json.dump({"order": filtered}, f)
+        except Exception:
+            pass
 
 
 def get_random_task():
@@ -159,20 +179,39 @@ def get_random_task():
 
     return rand_task_obj["title"]
 
+
+# NOTE: Changed and removed the category thing
+def save_manual_order(tasks: list) -> None:
+    file = Path(TASK_ORDER_FILE_PATH)
+    order = [t.get("title", "") for t in tasks]
+    try:
+        with open(file, "w") as f:
+            json.dump({"order": order}, f)
+    except Exception:
+        pass
+
+
 def get_topn_task():
-    """Picks an outstanding item completely at random across all non-empty active categories.
+    """Returns up to 3 task titles from the persisted manual order.
+
+    Cross-validates against current active tasks to prevent ghost notifications
+    for tasks that have been removed or completed.
 
     Returns:
-        tuple[str, str] or None: A tuple mapping (category, task_title) if items exist, otherwise None.
+        list[str]: Up to 3 task titles, filtered to only include active tasks.
     """
-    tasks = load_data(TASK_ORDER_FILE_PATH)
-    tasks = tasks['order']
-    if len(tasks) >= 3:
-        task = tasks[:3]
-    else:
-        task = tasks
+    active_tasks = load_tasks()
+    active_titles = {t["title"] for t in active_tasks if isinstance(t, dict)}
 
-    return task
+    order_data = load_data(TASK_ORDER_FILE_PATH)
+    if not isinstance(order_data, dict) or "order" not in order_data or len(order_data["order"]) == 0:
+        save_manual_order(active_tasks)
+        order_data = load_data(TASK_ORDER_FILE_PATH)
+
+    ntasks = order_data.get("order", [])
+    ntasks = [t for t in ntasks if t in active_titles and t.strip()]
+
+    return ntasks[:3]
 
 
 def load_completed_tasks():
@@ -203,9 +242,9 @@ def load_completed_tasks():
                     migrated = True
                 else:
                     new_data.append(task)
-            
+        data = new_data
+         
         if migrated:
-            data = new_data
             save_completed_tasks(new_data)
     return data
 
@@ -252,4 +291,4 @@ def mark_task_completed(task_title: str, task_type: str = "none"):
 
 
 if __name__ == "__main__":
-    print(load_completed_tasks())
+    print(get_topn_task())
