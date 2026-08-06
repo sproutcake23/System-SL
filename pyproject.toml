@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "system-sl"
-version = "1.1.4"
+version = "1.2.0"
 description = "A CLI-based Solo Leveling-inspired task management system."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -27,6 +27,9 @@ dependencies = [
   "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
   "click>=8.4.1",
   "pyspellchecker",
+  "colorthief==0.2.1",
+  "Pillow==12.3.0",
+  "imagecodecs>=2025.3.30,<2026",
   "requests>=2.31.0",
 ]
 
