@@ -89,8 +89,30 @@ class CrossPlatformAutostart:
         self.app_name = app_name
         self.os_type = platform.system()
         
+    def _is_appimage(self) -> bool:
+        """Check if running from an AppImage."""
+        exe = getattr(sys, "executable", "")
+        # AppImage mounts at /tmp/.mount_* or similar temp paths
+        return "/tmp/.mount_" in exe or exe.endswith(".AppImage")
+
+    def _get_appimage_path(self) -> str | None:
+        """Get the stable installed AppImage path if available."""
+        installed_path = os.path.expanduser("~/.local/bin/system-sl.AppImage")
+        if os.path.exists(installed_path):
+            return installed_path
+        return None
+
     def _get_exec_cmd(self) -> str:
         """Determines the correct command to execute this script/binary safely cross-platform."""
+        # Handle AppImage - use stable installed path instead of temp FUSE mount
+        if self._is_appimage():
+            stable_path = self._get_appimage_path()
+            if stable_path:
+                return f'"{stable_path}" --bg'
+            # Fallback: warn and use current executable (may not persist across runs)
+            print("Warning: AppImage not installed to ~/.local/bin/. Run install.sh for stable autostart.")
+            return f'"{os.path.abspath(sys.executable)}" --bg'
+
         if getattr(sys, "frozen", False):
             return f'"{os.path.abspath(sys.executable)}" --bg'
         

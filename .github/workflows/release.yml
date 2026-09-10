@@ -15,10 +15,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: system-sl-linux
-            asset_ext: tar.xz
+            asset_ext: AppImage
           - os: windows-latest
             artifact_name: system-sl-windows
-            asset_ext: zip
+            asset_ext: msix
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -38,20 +38,34 @@ jobs:
       - name: Build binary with PyInstaller
         run: uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" --add-data "assets:assets" --collect-all en_core_web_md src/system_sl/frontend/gui/main.py
 
-      - name: Package (Linux)
+      - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
-        run: tar -cJf ${{ matrix.artifact_name }}.${{ matrix.asset_ext }} -C dist system-sl
+        run: |
+          uv sync --extra appimage
+          uv run python -m appimage build
 
-      - name: Package (Windows)
+      - name: Bundle Linux release (AppImage + install scripts)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x packaging/linux/install.sh packaging/linux/uninstall.sh
+          tar -cJf system-sl-linux.tar.xz \
+            -C dist system-sl.AppImage \
+            -C "${{ github.workspace }}/packaging/linux" install.sh uninstall.sh
+
+      - name: Build MSIX (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/system-sl.exe -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.asset_ext }}"
+        run: |
+          cd packaging/windows
+          .\build_msix.ps1 -BinaryPath "..\..\dist\system-sl.exe" -OutputDir "..\..\dist"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_name }}.${{ matrix.asset_ext }}
+          path: |
+            dist/system-sl.${{ matrix.asset_ext }}
+            system-sl-linux.tar.xz
 
   release:
     needs: build
@@ -73,10 +87,24 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          gh release create "${{ github.ref_name }}"
-          system-sl-linux.tar.xz
-          system-sl-windows.zip
-          --title "THE SYSTEM ${{ github.ref_name }}"
-          --generate-notes
-          --notes-start-tag v1.1.0
+        run: |
+          # Upload Linux bundle (AppImage + install scripts)
+          gh release create "${{ github.ref_name }}" \
+            system-sl-linux.tar.xz \
+            system-sl.msix \
+            --title "THE SYSTEM ${{ github.ref_name }}" \
+            --generate-notes \
+            --notes-start-tag v1.1.0 \
+            --notes "## Installation
+
+          **Linux:**
+          \`\`\`bash
+          tar -xf system-sl-linux.tar.xz
+          cd system-sl-*
+          ./install.sh
+          \`\`\`
+
+          **Windows:**
+          Double-click \`system-sl.msix\` to install (requires Developer Mode enabled).
+
+          See README for more details."
