@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=THE SYSTEM
+Exec=system-sl
+Terminal=false
+Icon=system-sl
+Categories=Utility;Productivity;
+Comment=Arise, Player.
+StartupNotify=true
