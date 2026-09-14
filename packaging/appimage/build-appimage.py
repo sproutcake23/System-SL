@@ -23,10 +23,10 @@ import tempfile
 from pathlib import Path
 
 
-def run_cmd(cmd, cwd=None, check=True):
+def run_cmd(cmd, cwd=None, check=True, env=None):
     """Run a command and return the result."""
     print(f"🔧 Running: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=isinstance(cmd, str))
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=isinstance(cmd, str), env=env)
     if check and result.returncode != 0:
         print(f"❌ Command failed: {result.stderr}")
         sys.exit(result.returncode)
