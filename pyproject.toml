@@ -5,10 +5,41 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "system-sl"
 version = "1.2.0"
-description = "A CLI-based Solo Leveling-inspired task management system."
+description = "A Solo Leveling-inspired task management system with AI chatbot, Google Calendar sync, and gamified productivity."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
-
+license = {text = "GPL-3.0-or-later"}
+authors = [
+  {name = "sproutcake23"},
+  {name = "Pranav770 "},
+  {name = "yashnarayan123"},
+  {name = "sriram936"}
+]
+keywords = [
+  "task-management",
+  "productivity",
+  "solo-leveling",
+  "gamification",
+  "ai-chatbot",
+  "google-calendar",
+  "pyside6",
+  "qt"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: X11 Applications :: Qt",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Scheduling",
+  "Topic :: Utilities",
+]
 dependencies = [
   "pyside6",
   "qtpy",
@@ -33,9 +64,14 @@ dependencies = [
   "requests>=2.31.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/sproutcake23/System-SL"
+Repository = "https://github.com/sproutcake23/System-SL"
+Issues = "https://github.com/sproutcake23/System-SL/issues"
+Documentation = "https://github.com/sproutcake23/System-SL/tree/main/docs/wiki"
+
 [project.optional-dependencies]
 build = ["pyinstaller>=6.20.0"]
-appimage = ["appimage>=2.0.0"]
 
 [project.scripts]
 system-sl = "system_sl.frontend.gui.main:main"
@@ -46,20 +82,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
-# CHANGE 2: Restrict package searching strictly to your new namespace folder
 include = ["system_sl*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.html", "*.css", "*.mp3"]
-
-[tool.appimage.build]
-entry_point = "system_sl.frontend.gui.main:main"
-python_version = "3.13"
-desktop_entry = true
-
-[tool.appimage.desktop]
-name = "THE SYSTEM"
-comment = "A Solo Leveling-inspired task management system."
-categories = "Utility;Development;"
-icon = "utilities-terminal"
-terminal = false
+"*" = ["*.html", "*.css", "*.mp3", "*.wav", "*.svg", "*.png", "*.gif"]

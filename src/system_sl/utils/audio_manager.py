@@ -8,7 +8,7 @@ os.environ["QT_LOGGING_RULES"] = "*=false"
 from PySide6.QtCore import QUrl, QEventLoop, QTimer, qInstallMessageHandler
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from system_sl.utils.json_client import load_data, save_data
-from system_sl.utils.paths import get_tasks_file_path
+from system_sl.utils.paths import get_tasks_file_path, get_sounds_dir
 
 # 2. Native Qt Silencer: Catches any remaining C-level logs and drops them
 def _silent_qt_message_handler(mode, context, message):
@@ -16,8 +16,7 @@ def _silent_qt_message_handler(mode, context, message):
 qInstallMessageHandler(_silent_qt_message_handler)
 
 
-SETTINGS_FILE = get_tasks_file_path("settings.json")
-DEFAULT_SOUNDS_DIR = get_tasks_file_path("sounds")
+DEFAULT_SOUNDS_DIR = get_sounds_dir()
 os.makedirs(DEFAULT_SOUNDS_DIR, exist_ok=True)
 FALLBACK_SOUND = os.path.join(DEFAULT_SOUNDS_DIR, "default.wav")
 
@@ -64,3 +63,13 @@ def set_sound_setting(file_path: str):
     data = load_data(SETTINGS_FILE)
     data["notification_sound"] = os.path.abspath(file_path)
     save_data(SETTINGS_FILE, data)
+
+def list_available_sounds() -> list[str]:
+    """Returns a list of available sound files in the sounds directory."""
+    sounds = []
+    if DEFAULT_SOUNDS_DIR.exists():
+        for f in DEFAULT_SOUNDS_DIR.glob("*.mp3"):
+            sounds.append(str(f))
+        for f in DEFAULT_SOUNDS_DIR.glob("*.wav"):
+            sounds.append(str(f))
+    return sounds

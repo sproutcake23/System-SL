@@ -4,6 +4,58 @@ from pathlib import Path
 import subprocess
 
 from dotenv import load_dotenv, set_key
+
+
+def install_desktop_entry() -> int:
+    """Create a .desktop file for the AppImage in ~/.local/share/applications/"""
+    appimage_path = os.environ.get("APPIMAGE")
+    if not appimage_path:
+        print("❌ This command only works when running from an AppImage.")
+        print("   Set the APPIMAGE environment variable or run the AppImage directly.")
+        return 1
+
+    appimage_path = Path(appimage_path).resolve()
+    if not appimage_path.exists():
+        print(f"❌ AppImage not found at: {appimage_path}")
+        return 1
+
+    desktop_dir = Path.home() / ".local" / "share" / "applications"
+    desktop_dir.mkdir(parents=True, exist_ok=True)
+    desktop_file = desktop_dir / "system-sl.desktop"
+
+    # Find icon - try system locations first, fallback to generic
+    icon_name = "system-sl"
+    for icon_dir in [
+        Path("/usr/share/icons/hicolor/scalable/apps"),
+        Path("/usr/local/share/icons/hicolor/scalable/apps"),
+        Path.home() / ".local" / "share" / "icons" / "hicolor" / "scalable" / "apps",
+    ]:
+        icon_path = icon_dir / "system-sl.svg"
+        if icon_path.exists():
+            icon_name = str(icon_path)
+            break
+
+    content = f"""[Desktop Entry]
+Type=Application
+Name=THE SYSTEM
+Exec={appimage_path}
+Terminal=false
+Icon={icon_name}
+Categories=Utility;Productivity;
+Comment=Arise, Player.
+StartupNotify=true
+"""
+
+    try:
+        desktop_file.write_text(content)
+        os.chmod(desktop_file, 0o755)
+        print(f"✅ Desktop entry created at: {desktop_file}")
+        print(f"   Exec: {appimage_path}")
+        print("   You may need to log out/in or run 'update-desktop-database ~/.local/share/applications'")
+        return 0
+    except Exception as e:
+        print(f"❌ Failed to create desktop entry: {e}")
+        return 1
 from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Slot, QObject
 from PySide6.QtWidgets import (
     QApplication,
@@ -230,6 +282,10 @@ class MainWindow(QMainWindow):
 #         os._exit(0)
 
 def main():
+    # Handle --install-desktop flag before Qt initialization
+    if "--install-desktop" in sys.argv:
+        return install_desktop_entry()
+
     app = QApplication(sys.argv)
     
     # --- CHANGED: Inject the dynamic stylesheet on launch ---

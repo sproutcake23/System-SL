@@ -51,9 +51,9 @@ def get_platform_asset(assets: list) -> dict | None:
     is_windows = os.name == "nt"
     for asset in assets:
         name = asset["name"].lower()
-        if is_windows and name.endswith(".msix"):
+        if is_windows and name.endswith(".zip"):
             return asset
-        if not is_windows and name.endswith(".appimage"):
+        if not is_windows and name.endswith(".tar.xz"):
             return asset
     return None
 
@@ -71,17 +71,8 @@ def download_asset(url: str, dest_dir: Path) -> Path:
 
 
 def extract_binary(archive_path: Path, dest_dir: Path) -> Path:
-    """Extract the system-sl binary from a package archive."""
+    """Extract the system-sl binary from a tar.xz or zip archive."""
     binary_name = "system-sl.exe" if os.name == "nt" else "system-sl"
-
-    # AppImage is self-contained - no extraction needed
-    if archive_path.suffix == ".AppImage" or archive_path.name.lower().endswith(".appimage"):
-        return archive_path
-
-    # MSIX needs to be extracted
-    if archive_path.suffix == ".msix" or archive_path.name.lower().endswith(".msix"):
-        # For MSIX, we'll install it directly rather than extract
-        return archive_path
 
     if archive_path.suffix == ".xz" or archive_path.name.endswith(".tar.xz"):
         with tarfile.open(archive_path, "r:xz") as tar:
@@ -113,49 +104,6 @@ def install_update(new_binary: Path) -> None:
     install_dir.mkdir(parents=True, exist_ok=True)
     target_path = install_dir / binary_name
 
-    # Handle AppImage installation (Linux)
-    if new_binary.suffix == ".AppImage" or new_binary.name.lower().endswith(".appimage"):
-        target_path = install_dir / "system-sl.AppImage"
-        shutil.copy2(new_binary, target_path)
-        os.chmod(target_path, 0o755)
-
-        # Create .desktop file
-        shortcut_file = shortcut_dir / "system-sl.desktop"
-        content = [
-            "[Desktop Entry]",
-            "Type=Application",
-            "Name=THE SYSTEM",
-            f"Exec={target_path}",
-            f"Path={install_dir}",
-            "Terminal=false",
-            "Icon=utilities-terminal",
-            "Categories=Utility;",
-            "Comment=Arise, Player.",
-        ]
-        with open(shortcut_file, "w") as f:
-            f.write("\n".join(content))
-        os.chmod(shortcut_file, 0o755)
-        return
-
-    # Handle MSIX installation (Windows)
-    if new_binary.suffix == ".msix" or new_binary.name.lower().endswith(".msix"):
-        import subprocess
-        # Install MSIX package using Add-AppxPackage
-        ps_script = f'Add-AppxPackage -Path "{new_binary}" -ForceApplicationShutdown'
-        result = subprocess.run(
-            ["powershell.exe", "-Command", ps_script],
-            capture_output=True,
-            text=True,
-            shell=True
-        )
-        if result.returncode != 0:
-            # Fallback: If MSIX install fails (e.g., sideloading not enabled),
-            # try to install via App Installer or provide instructions
-            print(f"MSIX installation requires Developer Mode enabled.")
-            print(f"Manual install: Right-click the .msix file and select 'Install'")
-        return
-
-    # Legacy binary installation
     shutil.copy2(new_binary, target_path)
     if os.name != "nt":
         os.chmod(target_path, 0o755)
@@ -179,6 +127,7 @@ def install_update(new_binary: Path) -> None:
         os.chmod(shortcut_file, 0o755)
     else:
         shortcut_file = shortcut_dir / "THE SYSTEM.lnk"
+        import subprocess
         ps_script = f"""
         $WshShell = New-Object -ComObject WScript.Shell
         $Shortcut = $WshShell.CreateShortcut("{shortcut_file}")
