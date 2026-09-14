@@ -4,6 +4,6 @@ Name=THE SYSTEM
 Exec=system-sl
 Terminal=false
 Icon=system-sl
-Categories=Utility;Productivity;
+Categories=Utility;
 Comment=Arise, Player.
 StartupNotify=true

@@ -162,7 +162,7 @@ Name=THE SYSTEM
 Exec=AppRun
 Terminal=false
 Icon=system-sl
-Categories=Utility;Productivity;
+Categories=Utility;
 Comment=Arise, Player.
 StartupNotify=true
 """)
