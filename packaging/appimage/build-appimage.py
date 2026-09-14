@@ -64,11 +64,11 @@ def main():
         usr_dir.mkdir()
 
         # Create standard directories
-        (usr_dir / "bin").mkdir()
-        (usr_dir / "lib").mkdir()
-        (usr_dir / "share" / "applications").mkdir()
-        (usr_dir / "share" / "icons" / "hicolor" / "scalable" / "apps").mkdir()
-        (usr_dir / "share" / "system-sl").mkdir()
+        (usr_dir / "bin").mkdir(parents=True, exist_ok=True)
+        (usr_dir / "lib").mkdir(parents=True, exist_ok=True)
+        (usr_dir / "share" / "applications").mkdir(parents=True, exist_ok=True)
+        (usr_dir / "share" / "icons" / "hicolor" / "scalable" / "apps").mkdir(parents=True, exist_ok=True)
+        (usr_dir / "share" / "system-sl").mkdir(parents=True, exist_ok=True)
 
         # Step 3: Install wheel into AppDir
         print("\n📥 Installing wheel into AppDir...")
