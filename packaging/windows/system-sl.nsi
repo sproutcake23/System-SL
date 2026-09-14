@@ -33,7 +33,6 @@ VIAddVersionKey "FileVersion" "1.2.0"
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 
-!define MUI_WELCOMEFINISHPAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Wizard\modern-wizard.bmp"
 !define MUI_WELCOMEPAGE_TITLE "Welcome to THE SYSTEM Setup"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will install THE SYSTEM - a Solo Leveling-inspired task management system on your computer."
 !define MUI_FINISHPAGE_TITLE "Setup Complete"

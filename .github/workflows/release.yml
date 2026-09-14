@@ -96,6 +96,7 @@ jobs:
           if (-not (Test-Path $nsisDir)) { New-Item -ItemType Directory -Path $nsisDir }
           Copy-Item -Path "dist/system-sl.exe" -Destination "$nsisDir/system-sl.exe" -Force
           Copy-Item -Path "src/system_sl/assets/sounds" -Destination "$nsisDir/sounds" -Recurse -Force
+          Copy-Item -Path "LICENSE" -Destination "$nsisDir/LICENSE" -Force
 
       - name: Build NSIS installer
         shell: pwsh
