@@ -70,11 +70,10 @@ def main():
         (usr_dir / "share" / "icons" / "hicolor" / "scalable" / "apps").mkdir(parents=True, exist_ok=True)
         (usr_dir / "share" / "system-sl").mkdir(parents=True, exist_ok=True)
 
-        # Step 3: Install wheel into AppDir
+        # Step 3: Install wheel into AppDir using uv pip (avoids venv pip issues)
         print("\n📥 Installing wheel into AppDir...")
-        python_exe = shutil.which("python3") or shutil.which("python")
         run_cmd([
-            python_exe, "-m", "pip", "install",
+            "uv", "pip", "install",
             "--prefix", str(usr_dir),
             "--no-deps",  # We'll install deps separately
             str(wheel_path)
@@ -83,7 +82,7 @@ def main():
         # Install dependencies
         print("\n📥 Installing dependencies...")
         run_cmd([
-            python_exe, "-m", "pip", "install",
+            "uv", "pip", "install",
             "--prefix", str(usr_dir),
             "pyside6", "qtpy", "google-api-python-client",
             "google-auth-httplib2", "google-auth-oauthlib",
@@ -91,7 +90,8 @@ def main():
             "langchain-core>=1.4.0", "langchain-google-genai>=4.2.3",
             "langsmith>=0.8.5", "numpy>=2.4.6", "openai>=2.38.0",
             "protobuf>=7.35.0", "spacy>=3.8.14",
-            "en-core-web-md>=3.8.0", "click>=8.4.1",
+            "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
+            "click>=8.4.1",
             "pyspellchecker", "colorthief==0.2.1",
             "Pillow==12.3.0", "imagecodecs>=2025.3.30,<2026",
             "requests>=2.31.0"
