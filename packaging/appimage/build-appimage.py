@@ -150,7 +150,22 @@ exec "${{APPDIR}}/usr/bin/system-sl" "$@"
         apprun.chmod(0o755)
 
         # Step 6: Create desktop file in AppDir root (for appimagetool)
-        shutil.copy2(desktop_dst, appdir / "system-sl.desktop")
+        # Use AppImage-specific desktop file with Exec=AppRun
+        appimage_desktop_src = assets_src / "system-sl-appimage.desktop"
+        if appimage_desktop_src.exists():
+            shutil.copy2(appimage_desktop_src, appdir / "system-sl.desktop")
+        else:
+            # Fallback: create inline
+            (appdir / "system-sl.desktop").write_text("""[Desktop Entry]
+Type=Application
+Name=THE SYSTEM
+Exec=AppRun
+Terminal=false
+Icon=system-sl
+Categories=Utility;Productivity;
+Comment=Arise, Player.
+StartupNotify=true
+""")
 
         # Step 7: Copy icon to AppDir root
         shutil.copy2(icon_dst, appdir / "system-sl.svg")
