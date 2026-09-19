@@ -1,203 +1,92 @@
 #!/usr/bin/env python3
-"""
-Build AppImage for system-sl.
+"""Create an AppImage from the standalone PyInstaller executable.
 
-This script:
-1. Builds a wheel with uv
-2. Creates an AppDir structure
-3. Installs the wheel into the AppDir
-4. Copies assets and desktop file
-5. Runs appimagetool to create the AppImage
-
-Requirements:
-- uv (for building wheel)
-- appimagetool (for creating AppImage)
-- Linux with FUSE support
+The PyInstaller executable is already self-contained. Do not install the
+project wheel into an AppDir: pip-generated console scripts use an absolute
+shebang pointing to the build virtual environment.
 """
 
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 
-def run_cmd(cmd, cwd=None, check=True, env=None):
-    """Run a command and return the result."""
-    print(f"🔧 Running: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=isinstance(cmd, str), env=env)
-    if check and result.returncode != 0:
-        print(f"❌ Command failed: {result.stderr}")
-        sys.exit(result.returncode)
-    if result.stdout:
-        print(result.stdout)
-    return result
+def run_cmd(cmd, *, cwd=None, env=None):
+    print(f"Running: {' '.join(map(str, cmd))}")
+    subprocess.run(cmd, cwd=cwd, env=env, check=True)
 
 
-def main():
-    project_root = Path(__file__).parent.parent.parent
-    version = "1.2.0"  # Should match pyproject.toml
+def find_appimagetool(tools_dir: Path) -> Path:
+    """Use a system appimagetool when available, otherwise download one."""
+    installed = shutil.which("appimagetool")
+    if installed:
+        return Path(installed)
 
-    print("🚀 Building AppImage for system-sl...")
+    tools_dir.mkdir()
+    tool = tools_dir / "appimagetool"
+    run_cmd([
+        "wget", "-q", "-O", str(tool),
+        "https://github.com/AppImage/AppImageKit/releases/download/continuous/"
+        "appimagetool-x86_64.AppImage",
+    ])
+    tool.chmod(0o755)
+    return tool
 
-    # Step 1: Build wheel with uv
-    print("\n📦 Building wheel with uv...")
-    run_cmd(["uv", "build", "--wheel"], cwd=project_root)
 
-    # Find the built wheel
-    dist_dir = project_root / "dist"
-    wheels = list(dist_dir.glob("system_sl-*.whl"))
-    if not wheels:
-        print("❌ No wheel found in dist/")
-        sys.exit(1)
-    wheel_path = wheels[0]
-    print(f"✅ Found wheel: {wheel_path.name}")
+def main() -> None:
+    project_root = Path(__file__).resolve().parents[2]
+    with (project_root / "pyproject.toml").open("rb") as pyproject:
+        version = tomllib.load(pyproject)["project"]["version"]
 
-    # Step 2: Create AppDir structure
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        appdir = tmpdir / "system-sl.AppDir"
-        appdir.mkdir()
+    binary = project_root / "dist" / "system-sl"
+    if not binary.is_file() or not os.access(binary, os.X_OK):
+        raise SystemExit(
+            "Missing executable dist/system-sl. Build it with PyInstaller before "
+            "creating the AppImage."
+        )
 
-        usr_dir = appdir / "usr"
-        usr_dir.mkdir()
+    assets = project_root / "src" / "system_sl" / "assets"
+    desktop = assets / "system-sl-appimage.desktop"
+    icon = assets / "system-sl.svg"
+    if not desktop.is_file() or not icon.is_file():
+        raise SystemExit("AppImage desktop file or icon is missing from src/system_sl/assets.")
 
-        # Create standard directories
-        (usr_dir / "bin").mkdir(parents=True, exist_ok=True)
-        (usr_dir / "lib").mkdir(parents=True, exist_ok=True)
-        (usr_dir / "share" / "applications").mkdir(parents=True, exist_ok=True)
-        (usr_dir / "share" / "icons" / "hicolor" / "scalable" / "apps").mkdir(parents=True, exist_ok=True)
-        (usr_dir / "share" / "system-sl").mkdir(parents=True, exist_ok=True)
+    output = project_root / "dist" / f"system-sl-{version}-x86_64.AppImage"
+    output.unlink(missing_ok=True)
 
-        # Step 3: Install wheel into AppDir using uv pip (avoids venv pip issues)
-        print("\n📥 Installing wheel into AppDir...")
-        run_cmd([
-            "uv", "pip", "install",
-            "--prefix", str(usr_dir),
-            "--no-deps",  # We'll install deps separately
-            str(wheel_path)
-        ])
+    with tempfile.TemporaryDirectory(prefix="system-sl-appimage-") as temporary:
+        temporary_dir = Path(temporary)
+        appdir = temporary_dir / "system-sl.AppDir"
+        app_bin_dir = appdir / "usr" / "bin"
+        app_bin_dir.mkdir(parents=True)
 
-        # Install dependencies
-        print("\n📥 Installing dependencies...")
-        run_cmd([
-            "uv", "pip", "install",
-            "--prefix", str(usr_dir),
-            "pyside6", "qtpy", "google-api-python-client",
-            "google-auth-httplib2", "google-auth-oauthlib",
-            "python-dotenv>=1.2.2", "langchain>=1.3.1",
-            "langchain-core>=1.4.0", "langchain-google-genai>=4.2.3",
-            "langsmith>=0.8.5", "numpy>=2.4.6", "openai>=2.38.0",
-            "protobuf>=7.35.0", "spacy>=3.8.14",
-            "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
-            "click>=8.4.1",
-            "pyspellchecker", "colorthief==0.2.1",
-            "Pillow==12.3.0", "imagecodecs>=2025.3.30,<2026",
-            "requests>=2.31.0"
-        ])
+        # Copy the binary, not the Python packaging entry point. The former is
+        # portable; the latter embeds the builder's virtualenv in its shebang.
+        shutil.copy2(binary, app_bin_dir / "system-sl")
+        shutil.copy2(desktop, appdir / "system-sl.desktop")
+        shutil.copy2(icon, appdir / "system-sl.svg")
 
-        # Step 4: Copy assets
-        print("\n📁 Copying assets...")
-        assets_src = project_root / "src" / "system_sl" / "assets"
-        assets_dst = usr_dir / "share" / "system-sl"
-
-        # Copy sounds
-        sounds_src = assets_src / "sounds"
-        sounds_dst = assets_dst / "sounds"
-        if sounds_src.exists():
-            shutil.copytree(sounds_src, sounds_dst, dirs_exist_ok=True)
-            print(f"✅ Copied sounds to {sounds_dst}")
-
-        # Copy desktop file
-        desktop_src = assets_src / "system-sl.desktop"
-        desktop_dst = usr_dir / "share" / "applications" / "system-sl.desktop"
-        if desktop_src.exists():
-            shutil.copy2(desktop_src, desktop_dst)
-            print(f"✅ Copied desktop file to {desktop_dst}")
-
-        # Copy icon
-        icon_src = assets_src / "system-sl.svg"
-        icon_dst = usr_dir / "share" / "icons" / "hicolor" / "scalable" / "apps" / "system-sl.svg"
-        if icon_src.exists():
-            shutil.copy2(icon_src, icon_dst)
-            print(f"✅ Copied icon to {icon_dst}")
-
-        # Step 5: Create AppRun script
-        print("\n📝 Creating AppRun script...")
         apprun = appdir / "AppRun"
-        # Get Python version dynamically
-        py_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-        apprun_content = f"""#!/bin/sh
-# AppRun script for system-sl AppImage
-
-# Set up environment
-export PYTHONPATH="${{APPDIR}}/usr/lib/python{py_version}/site-packages:${{PYTHONPATH}}"
-export PATH="${{APPDIR}}/usr/bin:${{PATH}}"
-export LD_LIBRARY_PATH="${{APPDIR}}/usr/lib:${{LD_LIBRARY_PATH}}"
-
-# Qt platform plugins
-export QT_PLUGIN_PATH="${{APPDIR}}/usr/lib/python{py_version}/site-packages/PySide6/Qt/plugins:${{QT_PLUGIN_PATH}}"
-export QML2_IMPORT_PATH="${{APPDIR}}/usr/lib/python{py_version}/site-packages/PySide6/Qt/qml:${{QML2_IMPORT_PATH}}"
-
-# Ensure we can find the system-sl data
-export SYSTEM_SL_DATA_DIR="${{APPDIR}}/usr/share/system-sl"
-
-# Run the application
-exec "${{APPDIR}}/usr/bin/system-sl" "$@"
-"""
-        apprun.write_text(apprun_content)
+        apprun.write_text(
+            "#!/bin/sh\n"
+            "exec \"${APPDIR}/usr/bin/system-sl\" \"$@\"\n"
+        )
         apprun.chmod(0o755)
 
-        # Step 6: Create desktop file in AppDir root (for appimagetool)
-        # Use AppImage-specific desktop file with Exec=AppRun
-        appimage_desktop_src = assets_src / "system-sl-appimage.desktop"
-        if appimage_desktop_src.exists():
-            shutil.copy2(appimage_desktop_src, appdir / "system-sl.desktop")
-        else:
-            # Fallback: create inline
-            (appdir / "system-sl.desktop").write_text("""[Desktop Entry]
-Type=Application
-Name=THE SYSTEM
-Exec=AppRun
-Terminal=false
-Icon=system-sl
-Categories=Utility;
-Comment=Arise, Player.
-StartupNotify=true
-""")
-
-        # Step 7: Copy icon to AppDir root
-        shutil.copy2(icon_dst, appdir / "system-sl.svg")
-
-        # Step 8: Download appimagetool if needed
-        print("\n🔧 Checking for appimagetool...")
-        appimagetool = shutil.which("appimagetool")
-        if not appimagetool:
-            print("📥 Downloading appimagetool...")
-            appimagetool_path = Path(tmpdir) / "appimagetool"
-            run_cmd([
-                "wget", "-q", "-O", str(appimagetool_path),
-                "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-            ])
-            appimagetool_path.chmod(0o755)
-            appimagetool = str(appimagetool_path)
-
-        # Step 9: Build AppImage
-        print("\n🏗️  Building AppImage...")
-        output_name = f"system-sl-{version}-x86_64.AppImage"
-        output_path = project_root / "dist" / output_name
-
-        # Ensure dist directory exists
-        (project_root / "dist").mkdir(exist_ok=True)
-
-        # Run appimagetool
+        appimagetool = find_appimagetool(temporary_dir / "tools")
         env = os.environ.copy()
         env["VERSION"] = version
-        run_cmd([appimagetool, str(appdir), str(output_path)], env=env)
+        # appimagetool is itself an AppImage. Extract-and-run works on CI and
+        # developer machines even when FUSE 2 is unavailable.
+        env.setdefault("APPIMAGE_EXTRACT_AND_RUN", "1")
+        run_cmd([appimagetool, appdir, output], env=env)
 
-        print(f"\n✅ AppImage created: {output_path}")
-        print(f"📏 Size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
+    if not output.is_file() or not os.access(output, os.X_OK):
+        raise SystemExit("appimagetool did not produce an executable AppImage.")
+    print(f"Created {output} ({output.stat().st_size / 1024 / 1024:.1f} MiB)")
 
 
 if __name__ == "__main__":

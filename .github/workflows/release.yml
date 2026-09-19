@@ -39,8 +39,13 @@ jobs:
 
       - name: Build AppImage
         run: |
-          sudo apt-get update && sudo apt-get install -y fuse libfuse2
           uv run python packaging/appimage/build-appimage.py
+
+      - name: Smoke-test AppImage launcher
+        run: |
+          mkdir -p "$RUNNER_TEMP/appimage-home"
+          HOME="$RUNNER_TEMP/appimage-home" \
+            ./dist/system-sl-*-x86_64.AppImage --appimage-extract-and-run --install-desktop
 
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
