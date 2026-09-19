@@ -44,7 +44,7 @@ jobs:
       - name: Smoke-test AppImage launcher
         run: |
           sudo apt-get update
-          sudo apt-get install -y libegl1
+          sudo apt-get install -y libegl1 libpulse0
           mkdir -p "$RUNNER_TEMP/appimage-home"
           HOME="$RUNNER_TEMP/appimage-home" \
             ./dist/system-sl-*-x86_64.AppImage --appimage-extract-and-run --install-desktop
