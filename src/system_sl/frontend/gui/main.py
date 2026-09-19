@@ -110,6 +110,7 @@ class MainWindow(QMainWindow):
 
         self.autostart = CrossPlatformAutostart()
         self.tasks_window = None
+        self.onboarding_window = None
         self.update_thread = None
 
         main_container = QWidget()
@@ -129,6 +130,9 @@ class MainWindow(QMainWindow):
         sound_button = QPushButton("Set Notification Sound")
         sound_button.clicked.connect(self.change_notification_sound)
 
+        profile_button = QPushButton("Edit Player Profile")
+        profile_button.clicked.connect(self.open_onboarding)
+
         self.check_box = QCheckBox("Notification AutoStart")
         initial_state = self.autostart.is_enabled()
         self.check_box.setChecked(initial_state)
@@ -143,6 +147,7 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(task_button)
         left_layout.addWidget(google_button)
         left_layout.addWidget(sound_button)
+        left_layout.addWidget(profile_button)
         left_layout.addWidget(self.check_box)
         left_layout.addWidget(self.theme_toggle) # Added to the left panel UI
 
@@ -165,6 +170,26 @@ class MainWindow(QMainWindow):
         if self.tasks_window is None:
             self.tasks_window = TasksWindow()
         self.tasks_window.show()
+
+    def open_onboarding(self):
+        """Let a player create or replace their prioritization profile."""
+        if self.onboarding_window is not None:
+            self.onboarding_window.raise_()
+            self.onboarding_window.activateWindow()
+            return
+
+        self.onboarding_window = OnboardingWindow()
+        self.onboarding_window.onboarding_complete.connect(
+            self._on_onboarding_closed
+        )
+        self.onboarding_window.show()
+
+    def _on_onboarding_closed(self, _completed):
+        # Keep no stale reference after either finishing, skipping, or closing
+        # the wizard, so it can be opened again from the main menu.
+        if self.onboarding_window is not None:
+            self.onboarding_window.deleteLater()
+            self.onboarding_window = None
 
     def notification_autostart(self):
         self.autostart.toggle()
