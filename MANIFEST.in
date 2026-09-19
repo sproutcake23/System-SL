@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include src/system_sl/assets *.mp3 *.wav *.html *.css *.svg *.png *.gif
+recursive-include src/system_sl/spellchecker *

@@ -9,17 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: system-sl-linux
-            asset_ext: tar.xz
-          - os: windows-latest
-            artifact_name: system-sl-windows
-            asset_ext: zip
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -36,39 +27,129 @@ jobs:
         run: uv sync --extra build
 
       - name: Build binary with PyInstaller
-        run: uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" --add-data "assets:assets" --collect-all en_core_web_md src/system_sl/frontend/gui/main.py
+        run: |
+          uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile \
+            --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" \
+            --add-data "src/system_sl/assets:assets" \
+            --collect-all en_core_web_md \
+            src/system_sl/frontend/gui/main.py
 
-      - name: Package (Linux)
-        if: runner.os == 'Linux'
-        run: tar -cJf ${{ matrix.artifact_name }}.${{ matrix.asset_ext }} -C dist system-sl
+      - name: Package binary (tar.xz)
+        run: tar -cJf system-sl-linux.tar.xz -C dist system-sl
 
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -Path dist/system-sl.exe -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.asset_ext }}"
+      - name: Build AppImage
+        run: |
+          uv run python packaging/appimage/build-appimage.py
 
-      - name: Upload artifact
+      - name: Smoke-test AppImage launcher
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libpulse0
+          mkdir -p "$RUNNER_TEMP/appimage-home"
+          HOME="$RUNNER_TEMP/appimage-home" \
+            ./dist/system-sl-*-x86_64.AppImage --appimage-extract-and-run --install-desktop
+
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_name }}.${{ matrix.asset_ext }}
+          name: system-sl-linux
+          path: system-sl-linux.tar.xz
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-sl-appimage
+          path: dist/system-sl-*-x86_64.AppImage
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra build
+
+      - name: Build binary with PyInstaller
+        shell: pwsh
+        run: |
+          uv run python -m PyInstaller --name system-sl --windowed --noconsole --onefile `
+            --add-binary "spellchecker/resources/en.json.gz:spellchecker/resources" `
+            --add-data "src/system_sl/assets;assets" `
+            --collect-all en_core_web_md `
+            src/system_sl/frontend/gui/main.py
+
+      - name: Package binary (zip)
+        shell: pwsh
+        run: Compress-Archive -Path dist/system-sl.exe -DestinationPath "system-sl-windows.zip"
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --version 3.09
+
+      - name: Prepare NSIS assets
+        shell: pwsh
+        run: |
+          # Copy sounds to packaging/windows for NSIS
+          $nsisDir = "packaging/windows"
+          if (-not (Test-Path $nsisDir)) { New-Item -ItemType Directory -Path $nsisDir }
+          Copy-Item -Path "dist/system-sl.exe" -Destination "$nsisDir/system-sl.exe" -Force
+          Copy-Item -Path "src/system_sl/assets/sounds" -Destination "$nsisDir/sounds" -Recurse -Force
+          Copy-Item -Path "LICENSE" -Destination "$nsisDir/LICENSE" -Force
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          cd packaging/windows
+          & "C:\Program Files (x86)\NSIS\makensis.exe" system-sl.nsi
+          Copy-Item -Path "system-sl-setup.exe" -Destination "../../dist/system-sl-setup.exe" -Force
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-sl-windows
+          path: system-sl-windows.zip
+
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-sl-setup
+          path: dist/system-sl-setup.exe
 
   release:
-    needs: build
+    needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Linux artifact
+      - name: Download Linux binary
         uses: actions/download-artifact@v4
         with:
           name: system-sl-linux
 
-      - name: Download Windows artifact
+      - name: Download AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: system-sl-appimage
+
+      - name: Download Windows binary
         uses: actions/download-artifact@v4
         with:
           name: system-sl-windows
+
+      - name: Download NSIS installer
+        uses: actions/download-artifact@v4
+        with:
+          name: system-sl-setup
 
       - name: Create GitHub Release
         env:
@@ -76,7 +157,9 @@ jobs:
         run: >
           gh release create "${{ github.ref_name }}"
           system-sl-linux.tar.xz
+          system-sl-*.AppImage
           system-sl-windows.zip
+          system-sl-setup.exe
           --title "THE SYSTEM ${{ github.ref_name }}"
           --generate-notes
           --notes-start-tag v1.1.0

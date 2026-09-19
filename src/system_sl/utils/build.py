@@ -13,7 +13,7 @@ def main():
             "--noconsole",
             "--onefile",
             "--add-binary", "spellchecker/resources/en.json.gz:spellchecker/resources",
-            "--add-data", "assets:assets",
+            "--add-data", "src/system_sl/assets:assets",
             str(project_root / "src/system_sl/frontend/gui/main.py"),
         ],
         cwd=project_root,

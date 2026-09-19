@@ -8,13 +8,13 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 
 <table>
   <tr>
-    <td align="center"><img src="assets/main.gif" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
-    <td align="center"><img src="assets/tasks.gif" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
-    <td align="center"><img src="assets/onboarding.gif" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
+    <td align="center"><img src="src/system_sl/assets/main.gif" width="240" alt="Main menu"/><br/><em>Main menu</em></td>
+    <td align="center"><img src="src/system_sl/assets/tasks.gif" width="240" alt="Task manager"/><br/><em>Task manager</em></td>
+    <td align="center"><img src="src/system_sl/assets/onboarding.gif" width="240" alt="Onboarding wizard"/><br/><em>Onboarding wizard</em></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/chat.gif" width="240" alt="Chat"/><br/><em>Chat</em></td>
-    <td align="center"><img src="assets/notification.gif" width="240" alt="System notification"/><br/><em>System notification</em></td>
+    <td align="center"><img src="src/system_sl/assets/chat.gif" width="240" alt="Chat"/><br/><em>Chat</em></td>
+    <td align="center"><img src="src/system_sl/assets/notification.gif" width="240" alt="System notification"/><br/><em>System notification</em></td>
   </tr>
 </table>
 
@@ -30,7 +30,48 @@ SL is a personal progression system inspired by Solo Leveling. You define your d
 - **Background Reminder** — A persistent hourly notifier that keeps you on track.
 - **Cross-Platform Autostart** — Register the notifier on Linux, Windows, or macOS.
 
-## Quick Start
+## Installation
+
+### Option 1: AppImage (Linux — Recommended)
+
+Download the latest `system-sl-<version>-x86_64.AppImage` from [GitHub Releases](https://github.com/sproutcake23/System-SL/releases).
+
+```bash
+chmod +x system-sl-*.AppImage
+./system-sl-*.AppImage
+```
+
+**Desktop integration (choose one):**
+
+| Method | Command | Notes |
+|--------|---------|-------|
+| **Built-in (Recommended)** | `./system-sl-*.AppImage --install-desktop` | Creates `.desktop` entry automatically, no extra tools |
+| **AppImageLauncher** | Download from [GitHub](https://github.com/TheAssassin/AppImageLauncher/releases) | GUI tool, file manager integration, update management |
+| **Gear Lever** | `flatpak install flathub it.mijorus.gearlever` | Modern AppImage manager, requires Flatpak |
+
+The built-in `--install-desktop` flag creates a menu entry pointing to your AppImage location. Run it once after downloading:
+
+```bash
+chmod +x system-sl-*.AppImage
+./system-sl-*.AppImage --install-desktop
+```
+
+### Option 2: Windows Installer
+
+Download `system-sl-setup.exe` from [GitHub Releases](https://github.com/sproutcake23/System-SL/releases) and run it.
+
+This creates:
+- Start Menu entry
+- Desktop shortcut
+- Uninstaller in Settings → Apps
+
+### Option 3: Portable EXE (Windows/Linux)
+
+Download `system-sl-windows.zip` (Windows) or `system-sl-linux.tar.xz` (Linux) from [GitHub Releases](https://github.com/sproutcake23/System-SL/releases).
+
+Extract and run `system-sl.exe` / `system-sl` directly.
+
+### Option 4: From Source (Development)
 
 Requirements: Python >= 3.11 and < 3.14, and [uv](https://github.com/astral-sh/uv).
 
@@ -41,19 +82,16 @@ uv sync
 ```
 
 Launch the desktop app:
-
 ```bash
 uv run system-sl
 ```
 
 Run the background notifier:
-
 ```bash
 uv run system-sl --bg
 ```
 
 Build a standalone executable:
-
 ```bash
 uv run build-sl
 ```
@@ -72,3 +110,7 @@ Full documentation lives in the wiki:
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE) for details.
