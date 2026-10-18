@@ -79,11 +79,16 @@ def get_sounds_dir() -> Path:
 
     # Fallback to package data (development/PyInstaller)
     if getattr(sys, "frozen", False):
-        # PyInstaller bundle
+        # PyInstaller bundle. The build copies assets to <bundle>/assets, so
+        # that is the layout that actually resolves; the system_sl/assets path
+        # matched no bundle and silently fell through to an empty directory.
         bundle_dir = Path(sys._MEIPASS)
-        pkg_sounds = bundle_dir / "system_sl" / "assets" / "sounds"
-        if pkg_sounds.exists():
-            return pkg_sounds
+        for pkg_sounds in (
+            bundle_dir / "assets" / "sounds",
+            bundle_dir / "system_sl" / "assets" / "sounds",
+        ):
+            if pkg_sounds.exists():
+                return pkg_sounds
     else:
         # Development/source install - try to find assets relative to this file
         pkg_dir = Path(__file__).parent.parent.parent

@@ -114,12 +114,27 @@ class PersonaStorageHandler:
         self.setup_flag: Path = self.data_dir / ".setup_complete"
 
     def is_first_time(self) -> bool:
-        """Determines if the onboarding process has been executed previously.
+        """Determine whether a usable profile still needs to be created.
 
         Returns:
-            bool: True if the setup complete flag file is missing, otherwise False.
+            bool: True when no valid persona profile is available.
+
+        ``.setup_complete`` is only a legacy marker.  In particular, the GUI's
+        Skip button creates that marker without creating ``persona.json``.  A
+        marker by itself must never suppress onboarding: task prioritization
+        requires the persona file.
         """
-        return not self.setup_flag.exists()
+        if not self.persona_file.is_file():
+            return True
+
+        try:
+            with self.persona_file.open("r", encoding="utf-8") as file_pointer:
+                persona_data = json.load(file_pointer)
+        except (OSError, json.JSONDecodeError):
+            return True
+
+        responses = persona_data.get("responses") if isinstance(persona_data, dict) else None
+        return not isinstance(responses, list) or len(responses) != len(ONBOARDING_QUESTIONS)
 
     def ensure_data_directory(self) -> None:
         """Ensures the application data directories are physically allocated on disk."""
@@ -147,6 +162,9 @@ class PersonaStorageHandler:
         with open(self.persona_file, "w") as file_pointer:
             json.dump(persona_data, file_pointer, indent=2)
 
+        # A profile rewrite must take effect immediately rather than leaving a
+        # semantic vector calculated from the previous answers in place.
+        (self.data_dir / "vector_cache.json").unlink(missing_ok=True)
         self.setup_flag.touch()
 
     def touch_setup_flag_only(self) -> None:
@@ -435,4 +453,3 @@ def force_run_setup() -> bool:
             return False
 
     return engine.execute_workflow()
-

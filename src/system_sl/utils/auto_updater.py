@@ -15,12 +15,31 @@ GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
 def get_current_version() -> str:
-    """Read the installed version from package metadata."""
+    """Read the running version.
+
+    Package metadata only exists for a pip install. A PyInstaller build has
+    none, and the previous fallback of "0.0.0" made every newer release look
+    like an upgrade, so auto-update nagged forever.
+    """
     try:
         from importlib.metadata import version
         return version("system-sl")
     except Exception:
+        pass
+    try:
+        from system_sl import __version__
+        return __version__
+    except Exception:
         return "0.0.0"
+
+
+def running_appimage() -> Path | None:
+    """Return the AppImage this process was launched from, if any."""
+    appimage = os.environ.get("APPIMAGE")
+    if not appimage:
+        return None
+    path = Path(appimage)
+    return path if path.is_file() else None
 
 
 def get_latest_release_info() -> dict:
@@ -47,15 +66,77 @@ def should_update(current: str, latest: str) -> bool:
 
 
 def get_platform_asset(assets: list) -> dict | None:
-    """Pick the correct release asset for the current OS."""
+    """Pick the correct release asset for the current OS.
+
+    An AppImage user must receive the AppImage. Falling back to the bare
+    tar.xz for them is what used to happen, and installing that next to
+    their AppImage left two unrelated copies of the app on one machine.
+    """
     is_windows = os.name == "nt"
+    if is_windows:
+        for asset in assets:
+            if asset["name"].lower().endswith(".zip"):
+                return asset
+        return None
+
+    suffix = ".appimage" if running_appimage() else ".tar.xz"
     for asset in assets:
-        name = asset["name"].lower()
-        if is_windows and name.endswith(".zip"):
-            return asset
-        if not is_windows and name.endswith(".tar.xz"):
+        if asset["name"].lower().endswith(suffix):
             return asset
     return None
+
+
+def stage_appimage_update(new_appimage: Path, current: Path) -> Path:
+    """Stage a replacement AppImage next to the running one.
+
+    The current image cannot be overwritten in place while it is mounted, so
+    the new file is dropped alongside it and apply_pending_update() swaps it
+    in on the next launch.
+    """
+    staged = current.with_name(current.name + ".new")
+    shutil.copy2(new_appimage, staged)
+    os.chmod(staged, 0o755)
+    _save_pending_update(staged)
+    return staged
+
+
+def apply_pending_update() -> None:
+    """Swap in a staged AppImage replacement. Safe to call on every launch.
+
+    Runs before any UI starts. Renaming over the old image is safe even while
+    it is mounted: FUSE keeps the previous inode open for the running process.
+    """
+    staged = _load_pending_update()
+    if staged is None:
+        return
+
+    try:
+        current = running_appimage()
+        if current is None or not staged.is_file():
+            return
+
+        os.replace(staged, current)
+        os.chmod(current, 0o755)
+        print(f"[update] Applied staged update to {current}")
+    except OSError as e:
+        # Leave the staged file alone so the next launch can retry.
+        print(f"[update] Could not apply staged update: {e}")
+        return
+    finally:
+        _clear_pending_update()
+
+
+def _save_pending_update(staged: Path) -> None:
+    _write_settings({"pending_appimage_update": str(staged)})
+
+
+def _load_pending_update() -> Path | None:
+    raw = _read_settings().get("pending_appimage_update")
+    return Path(raw) if raw else None
+
+
+def _clear_pending_update() -> None:
+    _write_settings({"pending_appimage_update": None})
 
 
 def download_asset(url: str, dest_dir: Path) -> Path:
@@ -140,58 +221,57 @@ def install_update(new_binary: Path) -> None:
         )
 
 
+def _settings_path() -> Path:
+    from system_sl.utils.paths import get_tasks_file_path
+    return Path(get_tasks_file_path("settings.json"))
+
+
+def _read_settings() -> dict:
+    """Read settings.json, tolerating a missing or corrupt file."""
+    try:
+        with open(_settings_path(), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _write_settings(values: dict) -> None:
+    """Merge ``values`` into settings.json, removing keys set to None."""
+    data = _read_settings()
+    for key, value in values.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    try:
+        path = _settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except OSError:
+        pass
+
+
 def load_auto_update_preference() -> bool:
     """Read the auto-update setting from settings.json."""
-    try:
-        from system_sl.utils.paths import get_tasks_file_path
-        settings_path = Path(get_tasks_file_path("settings.json"))
-        if settings_path.exists():
-            with open(settings_path) as f:
-                data = json.load(f)
-            return data.get("auto_update", False)
-    except Exception:
-        pass
-    return False
+    return bool(_read_settings().get("auto_update", False))
 
 
 def save_auto_update_preference(enabled: bool) -> None:
     """Persist the auto-update setting to settings.json."""
-    from system_sl.utils.paths import get_tasks_file_path
-    settings_path = Path(get_tasks_file_path("settings.json"))
-    data = {}
-    if settings_path.exists():
-        with open(settings_path) as f:
-            data = json.load(f)
-    data["auto_update"] = enabled
-    with open(settings_path, "w") as f:
-        json.dump(data, f, indent=2)
+    _write_settings({"auto_update": enabled})
 
 
 def _load_last_check_time() -> float:
     """Read the last update check timestamp from settings.json."""
-    try:
-        settings_path = Path(get_tasks_file_path("settings.json"))
-        if settings_path.exists():
-            with open(settings_path) as f:
-                data = json.load(f)
-            return data.get("last_update_check", 0)
-    except Exception:
-        pass
-    return 0
+    return _read_settings().get("last_update_check", 0)
 
 
 def _save_last_check_time() -> None:
     """Persist the current time as the last update check timestamp."""
     import time as _time
-    from system_sl.utils.paths import get_tasks_file_path
-    settings_path = Path(get_tasks_file_path("settings.json"))
-    data = {}
-    if settings_path.exists():
-        with open(settings_path) as f:
-            data = json.load(f)
-    data["last_update_check"] = _time.time()
-    with open(settings_path, "w") as f:
-        json.dump(data, f, indent=2)
+    _write_settings({"last_update_check": _time.time()})
 
 
 class UpdateCheckThread(QThread):
@@ -226,17 +306,30 @@ class UpdateCheckThread(QThread):
                 return
 
             download_url = asset["browser_download_url"]
+            appimage = running_appimage()
             with tempfile.TemporaryDirectory() as tmp:
                 tmp_path = Path(tmp)
                 self.progress.emit(25)
                 archive = download_asset(download_url, tmp_path)
                 self.progress.emit(50)
-                binary = extract_binary(archive, tmp_path)
-                self.progress.emit(75)
-                install_update(binary)
+                if appimage is not None:
+                    # The AppImage is already the artifact; unpacking it would
+                    # only produce a stray bare binary.
+                    stage_appimage_update(archive, appimage)
+                else:
+                    binary = extract_binary(archive, tmp_path)
+                    self.progress.emit(75)
+                    install_update(binary)
                 self.progress.emit(100)
 
-            self.update_complete.emit(True, f"Updated to {latest_tag}. Please restart the app.")
+            if appimage is not None:
+                self.update_complete.emit(
+                    True,
+                    f"Update to {latest_tag} downloaded. It will be applied the "
+                    "next time you launch THE SYSTEM.",
+                )
+            else:
+                self.update_complete.emit(True, f"Updated to {latest_tag}. Please restart the app.")
 
         except requests.exceptions.HTTPError as e:
             # Rate limit hit — fail silently, no popup

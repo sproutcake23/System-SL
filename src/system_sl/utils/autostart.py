@@ -92,19 +92,26 @@ class CrossPlatformAutostart:
     def _get_exec_cmd(self) -> str:
         """Determines the correct command to execute this script/binary safely cross-platform."""
         if getattr(sys, "frozen", False):
+            # Under an AppImage, sys.executable points inside the transient FUSE
+            # mount ($APPIMAGE is running, sys.executable is
+            # /tmp/.mount_system-slXXXXXX/usr/bin/system-sl), which is unmounted
+            # as soon as the app exits. Recording that path produces an
+            # autostart entry that can never launch anything again.
+            appimage = os.environ.get("APPIMAGE")
+            if appimage and os.path.isfile(appimage):
+                return f'"{os.path.abspath(appimage)}" --bg'
             return f'"{os.path.abspath(sys.executable)}" --bg'
-        
 
         script_path = os.path.abspath(sys.argv[0])
         if not script_path.endswith(".py"):
-            return f"{script_path} --bg"
-        
+            return f'"{script_path}" --bg'
+
         python_exe = os.path.abspath(sys.executable)
-        
-        if platform.system() == "Windows":
-            # Windows needs quotes around individual paths to handle folder paths containing spaces safely
-            return f'"{python_exe}" "{script_path}" --bg'
-        return f"{python_exe} {script_path} --bg"
+
+        # Every path is quoted. The Exec key is split on unquoted whitespace,
+        # so an install directory containing a space would otherwise be torn
+        # into two arguments. The previous /bin/sh -c wrapper masked this.
+        return f'"{python_exe}" "{script_path}" --bg'
     
     def is_enabled(self) -> bool:
         if self.os_type == "Windows":
@@ -144,42 +151,37 @@ class CrossPlatformAutostart:
             autostart_dir = os.path.expanduser("~/.config/autostart")
             os.makedirs(autostart_dir, exist_ok=True)
             desktop_path = os.path.join(autostart_dir, f"{self.app_name.lower()}.desktop")
-            
-            # 1. Resolve the true project root path
-            base_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-            while base_dir != "/" and not os.path.exists(os.path.join(base_dir, ".venv")):
-                base_dir = os.path.dirname(base_dir)
-            if base_dir == "/":
+
+            # 1. Working directory. For a frozen build the "project root" is
+            # the AppImage itself (or a /tmp mount that no longer exists), so
+            # there is nothing to search for and the key is omitted entirely.
+            base_dir = ""
+            if not getattr(sys, "frozen", False):
                 base_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+                while base_dir != "/" and not os.path.exists(os.path.join(base_dir, ".venv")):
+                    base_dir = os.path.dirname(base_dir)
+                if base_dir == "/":
+                    base_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
-            # 2. Extract active system environment hooks (Fallback defaults if missing)
-            current_display = os.environ.get("DISPLAY", ":0")
-            current_dbus = os.environ.get("DBUS_SESSION_BUS_ADDRESS", "")
-
-            # 3. Build a wrapper command that passes desktop display permissions to uv
-            # We run it through /bin/sh to force inject the system display variables
-            wrapped_exec = (
-                f'/bin/sh -c "DISPLAY={current_display} '
-                f'DBUS_SESSION_BUS_ADDRESS=\'{current_dbus}\' '
-                f'{exec_cmd}"'
-            )
-
+            # 2. Exec is written verbatim. An autostart entry already runs
+            # inside the session, so DISPLAY and the D-Bus address are
+            # inherited and do not need to be baked in. Baking them in via
+            # /bin/sh -c "VAR=... \"<path>\"" also produced a value with
+            # nested double quotes, which the desktop entry spec does not
+            # allow and which desktop environments reject or mis-parse.
             try:
                 with open(desktop_path, "w") as f:
                     f.write(
                         "[Desktop Entry]\n"
                         "Type=Application\n"
                         f"Name={self.app_name}\n"
-                        f"Exec={wrapped_exec}\n"  # ◄─── Passes display environment hooks cleanly
-                        f"Path={base_dir}\n"
-                        "Hidden=false\n"
+                        f"Exec={exec_cmd}\n"
+                        + (f"Path={base_dir}\n" if base_dir else "")
+                        + "Hidden=false\n"
                         "NoDisplay=false\n"
                         "X-GNOME-Autostart-enabled=true\n"
                     )
                 return True
-            except Exception as e:
-                print(f"Linux Autostart Error: {e}")
-                return False        
             except Exception as e:
                 print(f"Linux Autostart Error: {e}")
                 return False
