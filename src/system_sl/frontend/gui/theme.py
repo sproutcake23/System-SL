@@ -21,6 +21,14 @@ QLabel {{
     color: {t['sys_color_text_secondary']};
 }}
 
+/* --- Standing notice: explains why ranking is degraded --- */
+QLabel#profileHint {{
+    color: {t['sys_color_text_secondary']};
+    font-size: 11px;
+    padding: 4px 6px;
+    border-left: 2px solid {t['sys_color_primary_dim']};
+}}
+
 /* --- Buttons --- */
 QPushButton {{
     background-color: {t['sys_color_primary_dim']};

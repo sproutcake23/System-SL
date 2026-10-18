@@ -467,7 +467,7 @@ class OnboardingWindow(QWidget):
         self.stack.setCurrentIndex(1)
 
     def _on_skip(self):
-        self.storage.touch_setup_flag_only()
+        self.storage.record_onboarding_declined()
         self._done = True
         self.onboarding_complete.emit(False)
         self.close()
