@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "system-sl"
-version = "1.2.0"
+dynamic = ["version"]
 description = "A Solo Leveling-inspired task management system with AI chatbot, Google Calendar sync, and gamified productivity."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -79,6 +79,12 @@ build-sl = "system_sl.utils.build:main"
 
 [tool.setuptools]
 include-package-data = true
+
+# The version lives in one place only: system_sl.__version__. A frozen
+# PyInstaller build has no package metadata to read, and the auto-updater
+# needs to know which version is actually running.
+[tool.setuptools.dynamic]
+version = {attr = "system_sl.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

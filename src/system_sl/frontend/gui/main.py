@@ -91,6 +91,7 @@ from system_sl.utils.theme_gen import generate_dynamic_tokens
 from system_sl.utils.autostart_migration import initialize_application_autostart
 from system_sl.utils.auto_updater import (
     UpdateCheckThread,
+    apply_pending_update,
     load_auto_update_preference,
     save_auto_update_preference,
 )
@@ -310,6 +311,9 @@ def main():
     # Handle --install-desktop flag before Qt initialization
     if "--install-desktop" in sys.argv:
         return install_desktop_entry()
+
+    # Swap in a staged AppImage replacement before anything else touches disk.
+    apply_pending_update()
 
     app = QApplication(sys.argv)
     

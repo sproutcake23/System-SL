@@ -7,10 +7,10 @@ shebang pointing to the build virtual environment.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
-import tomllib
 from pathlib import Path
 
 
@@ -36,10 +36,28 @@ def find_appimagetool(tools_dir: Path) -> Path:
     return tool
 
 
+def read_version(project_root: Path) -> str:
+    """Return the project version.
+
+    pyproject.toml declares the version dynamically from
+    ``system_sl.__version__``, so it cannot be read from the table. Parse the
+    attribute statically rather than importing the package, which would pull
+    in the whole dependency tree.
+    """
+    init_module = project_root / "src" / "system_sl" / "__init__.py"
+    match = re.search(
+        r'^__version__\s*=\s*["\']([^"\']+)["\']',
+        init_module.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    if not match:
+        raise SystemExit(f"Could not find __version__ in {init_module}")
+    return match.group(1)
+
+
 def main() -> None:
     project_root = Path(__file__).resolve().parents[2]
-    with (project_root / "pyproject.toml").open("rb") as pyproject:
-        version = tomllib.load(pyproject)["project"]["version"]
+    version = read_version(project_root)
 
     binary = project_root / "dist" / "system-sl"
     if not binary.is_file() or not os.access(binary, os.X_OK):
