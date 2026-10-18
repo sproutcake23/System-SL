@@ -92,15 +92,23 @@ class CrossPlatformAutostart:
     def _get_exec_cmd(self) -> str:
         """Determines the correct command to execute this script/binary safely cross-platform."""
         if getattr(sys, "frozen", False):
+            # Under an AppImage, sys.executable points inside the transient FUSE
+            # mount ($APPIMAGE is running, sys.executable is
+            # /tmp/.mount_system-slXXXXXX/usr/bin/system-sl), which is unmounted
+            # as soon as the app exits. Recording that path produces an
+            # autostart entry that can never launch anything again.
+            appimage = os.environ.get("APPIMAGE")
+            if appimage and os.path.isfile(appimage):
+                return f'"{os.path.abspath(appimage)}" --bg'
             return f'"{os.path.abspath(sys.executable)}" --bg'
-        
+
 
         script_path = os.path.abspath(sys.argv[0])
         if not script_path.endswith(".py"):
             return f"{script_path} --bg"
-        
+
         python_exe = os.path.abspath(sys.executable)
-        
+
         if platform.system() == "Windows":
             # Windows needs quotes around individual paths to handle folder paths containing spaces safely
             return f'"{python_exe}" "{script_path}" --bg'
