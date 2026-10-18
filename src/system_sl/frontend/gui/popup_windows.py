@@ -160,6 +160,12 @@ class TasksWindow(QWidget):
         if not self._order:
             self._priority_note = self._explain(result.get("_reason"))
             self._order = self._unranked_tasks()
+        elif result.get("_reason"):
+            # Ranked, but only partially: point the player at what unlocks the
+            # full ordering instead of leaving the degraded score unexplained.
+            self._priority_note = (
+                f"{result['_reason']} — use 'Edit Player Profile' to improve it"
+            )
         else:
             self._priority_note = ""
 

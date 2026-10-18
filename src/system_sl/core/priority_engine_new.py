@@ -605,20 +605,31 @@ class PriorityPipeline:
         return output
 
     def _empty_result(self, reason: str) -> dict:
-        return {
-            "generated_at": datetime.now().isoformat(),
-            "context": "GROWTH",
-            "context_description": reason,
-            "bandit_confidence": 0.0,
-            "bandit_weights": {},
-            "task_count": 0,
-            "quadrant_counts": {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0},
-            "quadrants": {
-                q: {**self.QUADRANTS[q], "tasks": []} for q in self.QUADRANTS
-            },
-            "all_tasks_ranked": [],
-            "_reason": reason,
-        }
+        return empty_ranking(reason)
+
+
+def empty_ranking(reason: str) -> dict:
+    """Build the degraded-result payload without instantiating the pipeline.
+
+    PriorityPipeline.__init__ eagerly loads the NLP model through
+    TaskAnalyzer, so constructing one raises in precisely the situations where
+    we still owe the caller a well-formed "no ranking" result.
+    """
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "context": "GROWTH",
+        "context_description": reason,
+        "bandit_confidence": 0.0,
+        "bandit_weights": {},
+        "task_count": 0,
+        "quadrant_counts": {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0},
+        "quadrants": {
+            q: {**PriorityPipeline.QUADRANTS[q], "tasks": []}
+            for q in PriorityPipeline.QUADRANTS
+        },
+        "all_tasks_ranked": [],
+        "_reason": reason,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -650,19 +661,36 @@ def save_manual_order(tasks: list) -> None:
 
 def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict:
     """Main application entry point."""
-    try:
-        # Prevent spacy overhead unless actually running
-        user_vec = Fusion().build_user_vector()
-    except Exception as e:
-        # Deliberately leave task_order.json untouched. Wiping it here would
-        # throw away the player's drag order over a transient failure such as
-        # a missing profile or an unreadable model. get_topn_task() rebuilds
-        # the order from the active tasks whenever it is empty.
-        log.warning("Could not build user vector: %s", e)
-        return PriorityPipeline()._empty_result("Vector generation failed")
+    degradation = None
+    fusion = Fusion()
 
-    pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)
+    # Checked explicitly rather than by catching FileNotFoundError, so that a
+    # genuinely broken NLP model still surfaces as an error instead of being
+    # mistaken for "this player skipped onboarding".
+    if not fusion.persona_path.exists():
+        # A player profile is an enhancement, not a prerequisite. Skipping
+        # onboarding is a supported choice, so rank with a neutral vector
+        # rather than refusing to produce any ranking at all: urgency and
+        # momentum still order the list, only the semantic term is flat.
+        log.info("No player profile at %s — ranking with a neutral vector.", fusion.persona_path)
+        user_vec = np.zeros(300, dtype=np.float32)
+        degradation = "No player profile — ranked by urgency only"
+    else:
+        try:
+            # Prevent spacy overhead unless actually running
+            user_vec = fusion.build_user_vector()
+        except Exception as e:
+            # Deliberately leave task_order.json untouched. Wiping it here
+            # would throw away the player's drag order over a transient
+            # failure such as an unreadable model. get_topn_task() rebuilds
+            # the order from the active tasks whenever it is empty.
+            log.warning("Could not build user vector: %s", e)
+            return empty_ranking("Vector generation failed")
+
     try:
+        # Constructed inside the guard on purpose: the constructor eagerly
+        # loads the NLP model and can raise for a broken bundle.
+        pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)
         result = pipeline.run(user_vec)
     except Exception as e:
         # A failure inside the pipeline must not propagate into the Qt slot
@@ -670,7 +698,12 @@ def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict
         # already had. Report it as an empty ranking instead so the caller can
         # decide how to degrade.
         log.warning("Prioritization pipeline failed: %s", e)
-        result = pipeline._empty_result("Prioritization failed")
+        result = empty_ranking("Prioritization failed")
+
+    # empty_ranking() already carries a reason for an empty ranking; never
+    # overwrite it with the softer "no profile" note.
+    if degradation and not result.get("_reason"):
+        result["_reason"] = degradation
 
     if display:
         display_prioritized_tasks(result)
