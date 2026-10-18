@@ -41,7 +41,7 @@ Name=THE SYSTEM
 Exec={appimage_path}
 Terminal=false
 Icon={icon_name}
-Categories=Utility;Productivity;
+Categories=Utility;
 Comment=Arise, Player.
 StartupNotify=true
 """
@@ -56,7 +56,7 @@ StartupNotify=true
     except Exception as e:
         print(f"❌ Failed to create desktop entry: {e}")
         return 1
-from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Slot, QObject
+from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Qt, Slot, QObject
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -69,6 +69,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QInputDialog,
+    QSizePolicy,
 )
 from system_sl.frontend.gui.popup_windows import TasksWindow, OnboardingWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
@@ -158,6 +159,14 @@ class MainWindow(QMainWindow):
         )
         self.profile_hint.setWordWrap(True)
         self.profile_hint.setObjectName("profileHint")
+        # A wrapped label in a QVBoxLayout otherwise expands to absorb all
+        # spare vertical space and stretches the whole column.
+        self.profile_hint.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
+        self.profile_hint.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
         left_layout.addWidget(self.profile_hint)
         # Set after addWidget: re-parenting resets visibility to hidden.
         self.profile_hint.setVisible(
