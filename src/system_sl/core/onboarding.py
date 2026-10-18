@@ -112,29 +112,60 @@ class PersonaStorageHandler:
 
         self.persona_file: Path = self.data_dir / "persona.json"
         self.setup_flag: Path = self.data_dir / ".setup_complete"
+        self.declined_flag: Path = self.data_dir / ".onboarding_declined"
 
-    def is_first_time(self) -> bool:
-        """Determine whether a usable profile still needs to be created.
+    def has_been_asked(self) -> bool:
+        """Whether the player has ever been shown onboarding, answered or not.
 
-        Returns:
-            bool: True when no valid persona profile is available.
-
-        ``.setup_complete`` is only a legacy marker.  In particular, the GUI's
-        Skip button creates that marker without creating ``persona.json``.  A
-        marker by itself must never suppress onboarding: task prioritization
-        requires the persona file.
+        ``.onboarding_declined`` records an explicit Skip. ``.setup_complete``
+        is checked as well because it predates that marker: a config dir
+        holding it without a persona can only have come from a skip, since
+        ``write_persona_profile`` always writes both.
         """
-        if not self.persona_file.is_file():
-            return True
+        return self.declined_flag.exists() or self.setup_flag.exists()
 
+    def _profile_state(self) -> str:
+        """Classify the profile on disk as ``valid``, ``corrupt`` or ``missing``."""
+        if not self.persona_file.is_file():
+            return "missing"
         try:
             with self.persona_file.open("r", encoding="utf-8") as file_pointer:
                 persona_data = json.load(file_pointer)
         except (OSError, json.JSONDecodeError):
-            return True
-
+            return "corrupt"
         responses = persona_data.get("responses") if isinstance(persona_data, dict) else None
-        return not isinstance(responses, list) or len(responses) != len(ONBOARDING_QUESTIONS)
+        if not isinstance(responses, list) or len(responses) != len(ONBOARDING_QUESTIONS):
+            return "corrupt"
+        return "valid"
+
+    def has_profile(self) -> bool:
+        """Whether a usable player profile exists.
+
+        This is deliberately separate from :meth:`is_first_time`: a player who
+        skipped has no profile but should not be onboarded again, and the main
+        window shows its banner based on the profile being missing rather than
+        on onboarding being pending.
+        """
+        return self._profile_state() == "valid"
+
+    def is_first_time(self) -> bool:
+        """Determine whether onboarding should be shown at startup.
+
+        Returns:
+            bool: True when the player has a profile to build, or has never
+                been asked.
+
+        A profile is an enhancement, not a prerequisite: ``run_prioritization``
+        ranks against a neutral vector when ``persona.json`` is absent, so a
+        player who declined must not be re-prompted on every launch.
+        """
+        state = self._profile_state()
+        if state == "valid":
+            return False
+        if state == "corrupt":
+            # A damaged profile is worth asking about again.
+            return True
+        return not self.has_been_asked()
 
     def ensure_data_directory(self) -> None:
         """Ensures the application data directories are physically allocated on disk."""
@@ -166,11 +197,17 @@ class PersonaStorageHandler:
         # semantic vector calculated from the previous answers in place.
         (self.data_dir / "vector_cache.json").unlink(missing_ok=True)
         self.setup_flag.touch()
+        # The player answered after all, so a past decline no longer applies.
+        self.declined_flag.unlink(missing_ok=True)
 
-    def touch_setup_flag_only(self) -> None:
-        """Marks setup execution complete without persisting profile configuration files."""
+    def record_onboarding_declined(self) -> None:
+        """Record that the player chose to skip profile creation.
+
+        Kept distinct from :meth:`write_persona_profile` so "declined" and
+        "finished" are not conflated under one legacy marker.
+        """
         self.ensure_data_directory()
-        self.setup_flag.touch()
+        self.declined_flag.touch()
 
 
 # =====================================================================

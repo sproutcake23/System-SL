@@ -35,6 +35,12 @@ completed_tasks.json
 .vscode/
 *.swp
 
+# Agent Instructions (personal, kept local)
+# Machine-wide prefs live in ~/.agents/AGENTS.md. These stay untracked so
+# personal working rules are not published in the shared repository.
+AGENTS.md
+CLAUDE.md
+
 # ══════════════════════════════════════════════════════════════════════════════
 # DO NOT ADD 'pyproject.toml' OR 'uv.lock' BELOW THIS LINE
 # ══════════════════════════════════════════════════════════════════════════════

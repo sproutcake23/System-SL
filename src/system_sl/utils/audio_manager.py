@@ -18,7 +18,12 @@ qInstallMessageHandler(_silent_qt_message_handler)
 
 DEFAULT_SOUNDS_DIR = get_sounds_dir()
 os.makedirs(DEFAULT_SOUNDS_DIR, exist_ok=True)
-FALLBACK_SOUND = os.path.join(DEFAULT_SOUNDS_DIR, "default.wav")
+
+# The bundled notification cue is default.mp3. There is no default.wav, so the
+# old fallback pointed at a file that never existed and every notification
+# that fell through to it was silently mute.
+SETTINGS_FILE = get_tasks_file_path("settings.json")
+FALLBACK_SOUND = os.path.join(DEFAULT_SOUNDS_DIR, "default.mp3")
 
 _player = None
 _audio_output = None

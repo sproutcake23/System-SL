@@ -41,7 +41,7 @@ Name=THE SYSTEM
 Exec={appimage_path}
 Terminal=false
 Icon={icon_name}
-Categories=Utility;Productivity;
+Categories=Utility;
 Comment=Arise, Player.
 StartupNotify=true
 """
@@ -56,7 +56,7 @@ StartupNotify=true
     except Exception as e:
         print(f"❌ Failed to create desktop entry: {e}")
         return 1
-from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Slot, QObject
+from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Qt, Slot, QObject
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -65,9 +65,11 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QVBoxLayout,
+    QLabel,
     QMessageBox,
     QFileDialog,
     QInputDialog,
+    QSizePolicy,
 )
 from system_sl.frontend.gui.popup_windows import TasksWindow, OnboardingWindow
 from system_sl.frontend.gui.chat_panel import ChatPanel
@@ -148,6 +150,30 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(task_button)
         left_layout.addWidget(google_button)
         left_layout.addWidget(sound_button)
+
+        # Ranking now degrades gracefully without a profile, so a player who
+        # skipped onboarding is no longer blocked from the app. They would
+        # otherwise have no way to learn why their ordering looks flat unless
+        # they happened to open the Tasks window.
+        self.profile_hint = QLabel(
+            "No player profile — tasks are ranked by urgency only."
+        )
+        self.profile_hint.setWordWrap(True)
+        self.profile_hint.setObjectName("profileHint")
+        # A wrapped label in a QVBoxLayout otherwise expands to absorb all
+        # spare vertical space and stretches the whole column.
+        self.profile_hint.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
+        self.profile_hint.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
+        left_layout.addWidget(self.profile_hint)
+        # Set after addWidget: re-parenting resets visibility to hidden.
+        self.profile_hint.setVisible(
+            not PersonaStorageHandler().has_profile()
+        )
+
         left_layout.addWidget(profile_button)
         left_layout.addWidget(self.check_box)
         left_layout.addWidget(self.theme_toggle) # Added to the left panel UI
@@ -185,12 +211,15 @@ class MainWindow(QMainWindow):
         )
         self.onboarding_window.show()
 
-    def _on_onboarding_closed(self, _completed):
+    def _on_onboarding_closed(self, completed):
         # Keep no stale reference after either finishing, skipping, or closing
         # the wizard, so it can be opened again from the main menu.
         if self.onboarding_window is not None:
             self.onboarding_window.deleteLater()
             self.onboarding_window = None
+        if completed:
+            # A profile now exists, so drop the urgency-only explanation.
+            self.profile_hint.setVisible(False)
 
     def notification_autostart(self):
         self.autostart.toggle()

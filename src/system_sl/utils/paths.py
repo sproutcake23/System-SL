@@ -90,8 +90,11 @@ def get_sounds_dir() -> Path:
             if pkg_sounds.exists():
                 return pkg_sounds
     else:
-        # Development/source install - try to find assets relative to this file
-        pkg_dir = Path(__file__).parent.parent.parent
+        # Development/source install. __file__ is system_sl/utils/paths.py, so
+        # the package root is two levels up. Three levels up pointed at src/,
+        # where there is no assets directory, so a source checkout silently
+        # fell through to an empty user directory with no sounds at all.
+        pkg_dir = Path(__file__).parent.parent
         pkg_sounds = pkg_dir / "assets" / "sounds"
         if pkg_sounds.exists():
             return pkg_sounds

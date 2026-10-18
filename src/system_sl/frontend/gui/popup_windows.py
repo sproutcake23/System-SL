@@ -19,10 +19,12 @@ from PySide6.QtCore import QDate, QSize, Qt, Signal, QTimer
 from system_sl.core.onboarding import ONBOARDING_QUESTIONS, PersonaStorageHandler
 from system_sl.core.tasks import (
     add_tasks,
+    load_tasks,
     mark_task_completed,
     remove_tasks,
 )
 from system_sl.core.priority_engine_new import (
+    load_manual_order,
     run_prioritization,
     ThompsonSampler,
     save_manual_order,
@@ -76,6 +78,11 @@ class TasksWindow(QWidget):
         self._order = []
         self._text_to_task = {}
 
+        # Status text is split in two so a transient "Added: x" message is not
+        # wiped by, nor endlessly appended to, a standing ranking notice.
+        self._status_message = ""
+        self._priority_note = ""
+
         root = QVBoxLayout(self)
         root.addWidget(QLabel("Here are your tasks!!"))
 
@@ -127,13 +134,64 @@ class TasksWindow(QWidget):
         # mutations made while the window was hidden show up.
         self._refresh_list()
 
+    def _set_status(self, message: str) -> None:
+        """Show ``message`` alongside any standing ranking notice."""
+        self._status_message = message
+        self._apply_status()
+
+    def _apply_status(self) -> None:
+        """Compose the transient message and the standing notice into the label."""
+        text = self._status_message
+        if self._priority_note:
+            text = f"{text} · {self._priority_note}" if text else self._priority_note
+        self.status_label.setText(text)
+
     def _refresh_list(self):
         # Re-rank from scratch via the prioritization engine, then render.
         result = run_prioritization(
             display=False
         )  # NOTE: To turn on the thompson sampling we also have to make changes here
         self._order = result.get("all_tasks_ranked", [])
+
+        # An empty ranking does not mean the player has no tasks. The ranking
+        # depends on the player profile and the bundled NLP model, so when it
+        # cannot be produced fall back to the stored list rather than showing a
+        # blank window that makes tasks look lost even though they were saved.
+        if not self._order:
+            self._priority_note = self._explain(result.get("_reason"))
+            self._order = self._unranked_tasks()
+        elif result.get("_reason"):
+            # Ranked, but only partially: point the player at what unlocks the
+            # full ordering instead of leaving the degraded score unexplained.
+            self._priority_note = (
+                f"{result['_reason']} — use 'Edit Player Profile' to improve it"
+            )
+        else:
+            self._priority_note = ""
+
+        self._apply_status()
         self._render(self._order)
+
+    @staticmethod
+    def _explain(reason: str | None) -> str:
+        """Turn a prioritization failure reason into something a player can act on."""
+        if not reason or reason == "No tasks found":
+            return ""
+        return f"Showing tasks unranked — {reason}"
+
+    def _unranked_tasks(self) -> list:
+        """Return every stored task, in manual order, for unranked rendering."""
+        try:
+            stored = [t for t in load_tasks() if isinstance(t, dict)]
+        except Exception as e:
+            self._status_message = f"Could not load tasks: {e}"
+            return []
+
+        position = {title: i for i, title in enumerate(load_manual_order())}
+        return sorted(
+            stored,
+            key=lambda t: position.get(t.get("title", ""), len(position)),
+        )
 
     def _render(self, tasks):
         """Render ``tasks`` (ordered list of dicts) as a numbered list."""
@@ -143,14 +201,15 @@ class TasksWindow(QWidget):
             task["rank"] = rank
             title = task.get("title", "")
             deadline = task.get("deadline")
-            p_score = task.get(
-                "P_final", 0.0
-            )  # just added pull score variable to render
+            p_score = task.get("P_final")  # absent when shown unranked
             display = f"{rank}. {title}"
             if deadline:
                 display += f"  → due {deadline}"
 
-            display += f" [P={p_score:.3f}]"
+            # Only claim a pull score when one was actually computed; the
+            # unranked fallback would otherwise read as a real score of zero.
+            if p_score is not None:
+                display += f" [P={p_score:.3f}]"
             item = QListWidgetItem(display)
             # Keep (category, title) so complete/remove still address the right
             # task even though the category is no longer shown.
@@ -182,11 +241,11 @@ class TasksWindow(QWidget):
         # 3. HYBRID ACTION B: Silently train the offline AI Bandit
         try:
             ThompsonSampler().record_feedback(moved_title, self._order)
-            self.status_label.setText(
+            self._set_status(
                 f"Reordered '{moved_title}' (AI silently updated!)"
             )
         except Exception as e:
-            self.status_label.setText(f"Reordered (AI train failed: {e})")
+            self._set_status(f"Reordered (AI train failed: {e})")
 
         # 4. Render safely outside the drop event loop
         QTimer.singleShot(0, lambda: self._render(self._order))
@@ -194,7 +253,7 @@ class TasksWindow(QWidget):
     def _selected(self):
         item = self.tasks_list_widget.currentItem()
         if item is None:
-            self.status_label.setText("Select a task first.")
+            self._set_status("Select a task first.")
             return None
         return item.data(Qt.UserRole)
 
@@ -204,9 +263,9 @@ class TasksWindow(QWidget):
             return
         try:
             mark_task_completed(task_title=title)  # Removed the category thing
-            self.status_label.setText(f"Completed: {title}")
+            self._set_status(f"Completed: {title}")
         except ValueError as e:
-            self.status_label.setText(str(e))
+            self._set_status(str(e))
         self._refresh_list()
 
     def _on_remove(self):
@@ -215,9 +274,9 @@ class TasksWindow(QWidget):
             return
         try:
             remove_tasks(task_title=title)
-            self.status_label.setText(f"Removed: {title}")
+            self._set_status(f"Removed: {title}")
         except ValueError as e:
-            self.status_label.setText(str(e))
+            self._set_status(str(e))
         self._refresh_list()
 
     def _on_add(self):
@@ -228,17 +287,17 @@ class TasksWindow(QWidget):
             else None
         )
         if not title:
-            self.status_label.setText("Title is required.")
+            self._set_status("Title is required.")
             return
         try:
             # Category is assigned by the model later; default for now.
             add_tasks(DEFAULT_CATEGORY,title,  deadline)
-            self.status_label.setText(f"Added: {title}")
+            self._set_status(f"Added: {title}")
             self.title_input.clear()
             self.deadline_checkbox.setChecked(False)
             self.deadline_edit.setDate(QDate.currentDate())
         except ValueError as e:
-            self.status_label.setText(str(e))
+            self._set_status(str(e))
         self._refresh_list()
 
 
@@ -408,7 +467,7 @@ class OnboardingWindow(QWidget):
         self.stack.setCurrentIndex(1)
 
     def _on_skip(self):
-        self.storage.touch_setup_flag_only()
+        self.storage.record_onboarding_declined()
         self._done = True
         self.onboarding_complete.emit(False)
         self.close()
