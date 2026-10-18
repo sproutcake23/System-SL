@@ -654,12 +654,23 @@ def run_prioritization(display: bool = True, use_thompson: bool = False) -> dict
         # Prevent spacy overhead unless actually running
         user_vec = Fusion().build_user_vector()
     except Exception as e:
-        print(f"\n[ERROR] Could not build user vector: {e}")
-        save_manual_order([])
+        # Deliberately leave task_order.json untouched. Wiping it here would
+        # throw away the player's drag order over a transient failure such as
+        # a missing profile or an unreadable model. get_topn_task() rebuilds
+        # the order from the active tasks whenever it is empty.
+        log.warning("Could not build user vector: %s", e)
         return PriorityPipeline()._empty_result("Vector generation failed")
 
     pipeline = PriorityPipeline(use_thompson_sampling=use_thompson)
-    result = pipeline.run(user_vec)
+    try:
+        result = pipeline.run(user_vec)
+    except Exception as e:
+        # A failure inside the pipeline must not propagate into the Qt slot
+        # that called us, or the caller keeps rendering whatever stale list it
+        # already had. Report it as an empty ranking instead so the caller can
+        # decide how to degrade.
+        log.warning("Prioritization pipeline failed: %s", e)
+        result = pipeline._empty_result("Prioritization failed")
 
     if display:
         display_prioritized_tasks(result)
