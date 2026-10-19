@@ -56,7 +56,17 @@ StartupNotify=true
     except Exception as e:
         print(f"❌ Failed to create desktop entry: {e}")
         return 1
-from PySide6.QtCore import QSize, QTimer, QSettings, QFileSystemWatcher, Qt, Slot, QObject
+from PySide6.QtCore import (
+    QSize,
+    QTimer,
+    QSettings,
+    QFileSystemWatcher,
+    Qt,
+    Slot,
+    QObject,
+    QThread,
+    Signal,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -82,6 +92,7 @@ from system_sl.utils import (
 )
 from system_sl.core import GoogleSyncEngine, CalendarProvider, TasksProvider
 from system_sl.core.onboarding import PersonaStorageHandler
+from system_sl.core.bookmarks import find_profiles, mine_bookmarks, write_document
 from system_sl.services import BackgroundServiceController
 from system_sl.utils.audio_manager import (
     play_sound,
@@ -97,6 +108,93 @@ from system_sl.utils.auto_updater import (
     load_auto_update_preference,
     save_auto_update_preference,
 )
+
+
+def format_bookmark_summary(document: dict, path) -> str:
+    """Render an import result as the message shown in the GUI dialog."""
+    counts = document["counts"]
+    lines = [
+        f"Imported {counts['total_kept']} bookmarks "
+        f"from {', '.join(counts['browsers'])}."
+    ]
+
+    broken = [source for source in document["sources"] if source["error"]]
+    if broken:
+        lines.append("")
+        lines.append("Could not read:")
+        lines.extend(
+            f"  • {source['browser']} / {source['profile']}: {source['error']}"
+            for source in broken
+        )
+
+    if counts["skipped_no_keywords"]:
+        lines.append("")
+        lines.append(
+            f"Skipped {counts['skipped_no_keywords']} entries with no usable keywords."
+        )
+
+    top = document["top_keywords"][:12]
+    if top:
+        lines.append("")
+        lines.append(
+            "Top keywords: "
+            + ", ".join(f"{entry['keyword']} ({entry['count']})" for entry in top)
+        )
+
+    lines.append("")
+    lines.append(f"Saved to:\n{path}")
+    return "\n".join(lines)
+
+
+def import_bookmarks_headless() -> int:
+    """Run the import without starting the GUI, for scripts and packaged runs.
+
+    The frozen build exposes no module runner, so this flag is the only way
+    to exercise the extraction from a shell inside the AppImage.
+    """
+    profiles = find_profiles()
+    if not profiles:
+        print("No browser profiles with bookmarks were found.")
+        print("Looked for Gecko (Zen, Firefox, LibreWolf) and Chromium")
+        print("(Chrome, Chromium, Brave, Edge, Vivaldi, Opera) profiles.")
+        return 1
+
+    document = mine_bookmarks(profiles)
+    path = write_document(document)
+    print(format_bookmark_summary(document, path))
+    return 0
+
+
+class BookmarkImportThread(QThread):
+    """Import browser bookmarks without blocking the main window.
+
+    Loading the spaCy model and tagging every bookmark takes seconds on a
+    large history, so it runs here rather than inline in the click
+    handler. A profile that cannot be read is reported inside the result
+    document rather than raised, so one locked or half-installed browser
+    does not sink the whole import.
+    """
+
+    imported = Signal(str)
+    failed = Signal(str)
+
+    def run(self):
+        try:
+            profiles = find_profiles()
+            if not profiles:
+                self.failed.emit(
+                    "No browser profiles with bookmarks were found.\n\n"
+                    "Looked for Zen, Firefox and LibreWolf (Gecko), and "
+                    "Chrome, Chromium, Brave, Edge, Vivaldi and Opera "
+                    "(Chromium), including Flatpak and Snap installs."
+                )
+                return
+
+            document = mine_bookmarks(profiles)
+            path = write_document(document)
+            self.imported.emit(format_bookmark_summary(document, path))
+        except Exception as error:  # noqa: BLE001 - surfaced to the user
+            self.failed.emit(f"{type(error).__name__}: {error}")
 
 
 class MainWindow(QMainWindow):
@@ -115,6 +213,7 @@ class MainWindow(QMainWindow):
         self.tasks_window = None
         self.onboarding_window = None
         self.update_thread = None
+        self.bookmark_thread = None
 
         main_container = QWidget()
         self.setCentralWidget(main_container)
@@ -135,6 +234,11 @@ class MainWindow(QMainWindow):
 
         profile_button = QPushButton("Edit Player Profile")
         profile_button.clicked.connect(self.open_onboarding)
+
+        # Reading bookmarks inspects the user's browsing history, so this
+        # is opt-in and never runs on its own at startup.
+        self.bookmark_button = QPushButton("Import Browser Bookmarks")
+        self.bookmark_button.clicked.connect(self.import_bookmarks)
 
         self.check_box = QCheckBox("Notification AutoStart")
         initial_state = self.autostart.is_enabled()
@@ -175,6 +279,7 @@ class MainWindow(QMainWindow):
         )
 
         left_layout.addWidget(profile_button)
+        left_layout.addWidget(self.bookmark_button)
         left_layout.addWidget(self.check_box)
         left_layout.addWidget(self.theme_toggle) # Added to the left panel UI
 
@@ -220,6 +325,34 @@ class MainWindow(QMainWindow):
         if completed:
             # A profile now exists, so drop the urgency-only explanation.
             self.profile_hint.setVisible(False)
+
+    def import_bookmarks(self):
+        """Extract bookmarks from the local browsers into bookmarks.json.
+
+        Deliberately user-triggered. Reads every discovered profile, which
+        is why the work happens on a background thread.
+        """
+        if self.bookmark_thread is not None and self.bookmark_thread.isRunning():
+            return
+
+        self.bookmark_button.setEnabled(False)
+        self.bookmark_button.setText("Importing bookmarks…")
+
+        self.bookmark_thread = BookmarkImportThread(self)
+        self.bookmark_thread.imported.connect(self._on_bookmarks_imported)
+        self.bookmark_thread.failed.connect(self._on_bookmarks_failed)
+        self.bookmark_thread.finished.connect(self._reset_bookmark_button)
+        self.bookmark_thread.start()
+
+    def _reset_bookmark_button(self):
+        self.bookmark_button.setEnabled(True)
+        self.bookmark_button.setText("Import Browser Bookmarks")
+
+    def _on_bookmarks_imported(self, message):
+        QMessageBox.information(self, "Browser Bookmarks", message)
+
+    def _on_bookmarks_failed(self, message):
+        QMessageBox.warning(self, "Browser Bookmarks", message)
 
     def notification_autostart(self):
         self.autostart.toggle()
@@ -340,6 +473,11 @@ def main():
     # Handle --install-desktop flag before Qt initialization
     if "--install-desktop" in sys.argv:
         return install_desktop_entry()
+
+    # Also before Qt: lets the packaged AppImage run the bookmark import
+    # from a shell, where there is no `python -m` to fall back on.
+    if "--import-bookmarks" in sys.argv:
+        sys.exit(import_bookmarks_headless())
 
     # Swap in a staged AppImage replacement before anything else touches disk.
     apply_pending_update()
